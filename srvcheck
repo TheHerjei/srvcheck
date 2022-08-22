@@ -50,7 +50,7 @@ then
 fi
 
 # Set report file
-F=/var/log/srvcheck/srvchk-$(date +%Y_%M_%d).txt
+F=/var/log/srvcheck/srvchk-$(date +%Y_%m_%d).txt
 
 # Set linux distro! (debian, arch, alpine, oracle)
 distro=$(cat /etc/os-release | grep '^ID.*' | sed s/ID=//)
@@ -59,102 +59,108 @@ distro=$(cat /etc/os-release | grep '^ID.*' | sed s/ID=//)
 touch $F
 
 # Machine informations
-echo $HOSTNAME | tee -a $F
-uname -s -r -p -o | tee -a $F
-echo "# Ore di attività:" | tee -a $F
-uptime -p | tee -a $F
+echo -e "##### - $F - #####\n" | tee -a $F
+echo -e "## - INFORMAZIONI SULLA MACCHINA - ##\n" | tee -a $F
+echo "# - NOME MACCHINA: "$HOSTNAME | tee -a $F
+echo "# - VERSIONE KERNEL: "$(uname -s -r) | tee -a $F
+echo "# Ore di attività: "$(uptime -p) | tee -a $F
 echo "# Nome distribuzione rilevato: "$distro | tee -a $F
 
 # Internet connection control
+echo -e "\n## - CONNESSIONE INTERNET - ##" | tee -a $F
 echo "# Rilevamento interfacce di rete..." | tee -a $F
 ipv4=$(ip a | grep -e 'inet\W' | sed '/.*lo$/d' | awk '{ print $2 }'| sed 's/\/[0-9][0-9]//')
 ipv6=$(ip a | grep -e 'inet\w' | sed '/.*::1\/128.*/d' | awk '{ print $2 }'| sed 's/\/[0-9][0-9]//')
 
-echo "# Indirizzi ipv4" | tee -a $F
+echo -e "\n# Indirizzi ipv4" | tee -a $F
 echo $ipv4 | tee -a $F
-echo "# Indirizzi ipv6" | tee -a $F
+echo -e "\n# Indirizzi ipv6" | tee -a $F
 echo $ipv6 | tee -a $F
 
 ping -c 1 1.1.1.1
-if [ ! $? -eq 0 ]
+if [[ ! $? -eq 0 ]]
 then
-    echo "# Attenzione! Connessione Internet assente! [KO]" | tee -a $F
+    echo -e "\n!!! Attenzione !!!! Connessione Internet assente! [KO]\n" | tee -a $F
 else
     echo "# Connessione Internet presente. [OK]"
 fi
 
 ping -c 1 google.it
-if [ ! $? -eq 0 ]
+if [[ ! $? -eq 0 ]]
 then
-    echo "# Attenzione! DNS non risolve i nomi! [KO]" | tee -a $F
+    echo -e "\n!!! Attenzione !!! DNS non risolve i nomi! [KO]\n" | tee -a $F
 else
     echo "# Risoluzione DNS esterna a posto. [OK]"
 fi
 
 # Controllo connessioni attive
 # Connessioni in uscita
-echo "# Connessioni attive..." | tee -a $F
+echo -e "\n# Connessioni attive...\n" | tee -a $F
 netstat -anp | grep -e '.*ESTABLISHED.*' | tee -a $F
 
 # Processi in ascolto
-echo "# Connessioni in ascolto" | tee -a $F
+echo -e "\n# Connessioni in ascolto\n" | tee -a $F
 netstat -nlp | grep 'tcp.*LISTEN.*' | tee -a $F
 netstat -nlp | grep 'udp.*LISTEN.*' | tee -a $F
 
 # DateTime control
+echo -e "\n## - CONTROLLO OROLOGIO DI SISTEMA - ##\n" | tee -a $F
+
 U=$(curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $5 " " $6 }')
 L=$(date -u +"%d %Y %T")
 if [[ $U != $L ]]
 then
-    echo "# Attenzione! Orologio di sistema non sincronizzato. [3]" | tee -a $F
+    echo -e "\n!!! Attenzione !!! Orologio di sistema non sincronizzato. [3]\n" | tee -a $F
     curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $4 " " $5 " " $6 " - Orario corretto"}' | tee -a $F;echo $(date -u +"%d %b %Y %T")" - Orario di sistema" | tee -a $F
 else
     echo "# Orario di sistema sincronizzato [OK]"
 fi
 
 # Storage space control
+echo -e "\n## - SPAZIO SU DISCO - ##\n" | tee -a $F
 s=('.*/$' '.*/home$' '.*/tmp$' '.*/boot$')
 
 for i in "${s[@]}"
 do
     d=$(df -h | grep $i | awk '{ print $5 }' | sed 's/%//')
+    echo -e "\nMount "$i" Spazio usato: "$d"%" | sed 's/[\.\*$]//g' | tee -a $F
     case $d in
     [1-4][0-9])
     echo "# Spazio disco sufficiente [OK]"
-    df -h | grep $i
     ;;
     [5-6][0-9])
     echo "# Attenzione, spazio disco in esaurimento! [1]" | tee -a $F
-    df -h | grep $i
     ;;
     [7-9][0-9])
     echo "### ATTENZIONE! ### Spazio su disco ridotto! [3]" | tee -a $F
-    df -h | grep $i
     ;;
     100)
     echo "### Errore Critico! Spazio esaurito! [KO]" | tee -a $F
     ;;
     *)
     echo "# Spazio su disco sufficiente [OK]"
-    df -h | grep $i
     ;;
     esac
 done
 
+echo -e "\n## - UTILIZZO RISORSE - ##\n" | tee -a $F
+
 # Memory usage
-echo "# Utilizzo memoria RAM"
 T=$(free | grep 'Mem.*' | awk '{ print $2}')
 U=$(free | grep 'Mem.*' | awk '{ print $3}')
 P=$(( U *100 / T ))
 
-echo $P"%"
+echo "# Utilizzo memoria RAM "$P"%" | tee -a $F
 
 case $P in
+[5-6][0-9])
+echo "# Non Critico, elevato utilizzo memoria RAM! [1]" | tee -a $F
+;;
 [7-8][0-9])
 echo "# Attenzione, Elevato utilizzo memoria RAM! [2]" | tee -a $F
 ;;
 9[0-9])
-echo "# Attenzione, Utilizzo RAM Critico! [3]" | tee -a $F
+echo "!!! Attenzione !!! Utilizzo RAM Critico! [3]" | tee -a $F
 ;;
 *)
 echo "# Livelli utilizzo RAM nella norma. [OK]"
@@ -162,16 +168,15 @@ echo "# Livelli utilizzo RAM nella norma. [OK]"
 esac
 
 # CPU usage
-echo "# Utilizzo CPU:"
 C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
-echo $C"%"
+echo "# Utilizzo CPU: "$C"%" | tee -a $F
 
 case $C in
 [5-7][0-9],[0-9])
 echo "# Attenzione, utilizzo CPU oltre la media [1]" | tee -a $F
 ;;
 [8-9][0-9],[0-9])
-echo "# Attenzione, livelli CPU Critici [3]" | tee -a $F
+echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
 ;;
 *)
 echo "# Livelli utilizzo CPU normali [OK]"
@@ -179,23 +184,25 @@ echo "# Livelli utilizzo CPU normali [OK]"
 esac
 
 # Update control
-case in distro
+echo -e "\n## - CONTROLLO AGGIORNAMENTI - ##\n" | tee -a $F
+
+case $distro in
 debian)
 apt-get update
-echo "# Upgradable packages:" | tee -a $F
+echo -e "# Aggiornamenti disponibili:\n" | tee -a $F
 apt list --upgradeable | tee -a $F
 ;;
 arch)
 pacman -S
-echo "# Upgradable packages:" | tee -a $F
+echo -e "# Aggiornamenti disponibili:\n" | tee -a $F
 ;;
 alpine)
 apk update
-echo "# Upgradable packages:" | tee -a $F
+echo -e "# Aggiornamenti disponibili:\n" | tee -a $F
 apk list -u | tee -a $F
 ;;
 fedora)
-echo "# Upgradable packages:" | tee -a $F
+echo -e "# Aggiornamenti disponibili:\n" | tee -a $F
 dnf check-upgrade | tee -a $F
 ;;
 *)
@@ -204,12 +211,13 @@ echo "# Controllo aggiornamenti non disponibile per questa distribuzione..." | t
 esac
 
 # Security auditing
+echo -e "\n## - CONTROLLO SICUREZZA - ##\n" | tee -a $F
+
 /opt/lynis/lynis audit system > /dev/null
-echo "### Lynis Security Auditing ###" | tee -a $F
-echo "# --- Attenzione:" | tee -a $F
+echo -e "# --- Attenzione:\n" | tee -a $F
 cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=//g' | tee -a $F
 
-echo "# --- Suggerimenti:" | tee -a $F
+echo -e "# --- Suggerimenti:\n" | tee -a $F
 cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=//g' | tee -a $F
 
 less $F
