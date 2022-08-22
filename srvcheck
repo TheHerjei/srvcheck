@@ -1,0 +1,47 @@
+#!/bin/bash
+
+## - TODO - ##
+# Date Time control
+# Storage space control
+# CPU/RAM Consumption control
+# Update control
+# Backups control
+# Security check
+# Format data for reporting
+
+# Set report file
+F=/var/log/srvcheck/srvchk-$(date +%Y_%M_%d).txt
+
+# Initialize report file
+touch $F
+
+# DateTime control
+date
+
+# Storage space control
+s=('.*/$' '.*/home$' '.*/tmp$' '.*/boot$')
+
+for i in "${s[@]}"
+do
+    d=$(df -h | grep $i | awk '{ print $5 }' | sed 's/%//')
+    case $d in
+    [1-4][0-9])
+    echo "# Spazio disco sufficiente"
+    df -h | grep $i
+    ;;
+    [5-6][0-9])
+    echo "# Attenzione, spazio disco in esaurimento!"
+    df -h | grep $i
+    echo "# Riporto l'avviso"
+
+    ;;
+    [7-9][0-9])
+    echo "### ATTENZIONE! Spazio su disco ridotto! ###"
+    df -h | grep $i
+    ;;
+    *)
+    echo "# Spazio su disco sufficiente"
+    df -h | grep $i
+    ;;
+    esac
+done
