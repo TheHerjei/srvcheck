@@ -6,8 +6,8 @@
 # V CPU/RAM Consumption control
 # V Update control
 # Backups control
-# Security check
-# Format data for reporting
+# V Security check
+# V Format data for reporting
 
 # Error leveling:
 # [OK] No errors
@@ -20,26 +20,26 @@
 p=$(id | awk '{ print $1 }')
 if [ $p != "uid=0(root)" ]
 then
-    echo "# Eseguire con privilegi di root!"
+echo "# Eseguire con privilegi di root! [KO]"
     exit 0
 fi
 
 # Check dependencies
 if [ ! -e /usr/bin/top ]
 then
-    echo "# Installare il comando top"
+    echo "# Installare il comando top [KO]"
     exit 0
 fi
 
 if [ ! -e /opt/lynis/lynis ]
 then
-    echo "# Installare lynis"
+    echo "# Installare lynis [KO]"
     exit 0
 fi
 
 if [ ! -e /usr/bin/netstat ]
 then
-    echo "# Installare il comando netstat"
+    echo "# Installare il comando netstat [KO]"
     exit 0
 fi
 
@@ -59,50 +59,55 @@ distro=$(cat /etc/os-release | grep '^ID.*' | sed s/ID=//)
 touch $F
 
 # Machine informations
-echo $HOSTNAME
-uname -s -r -p -o
-echo "# Ore di attività:"
-uptime -p
+echo $HOSTNAME | tee -a $F
+uname -s -r -p -o | tee -a $F
+echo "# Ore di attività:" | tee -a $F
+uptime -p | tee -a $F
+echo "# Nome distribuzione rilevato: "$distro | tee -a $F
 
 # Internet connection control
-echo "# Rilevamento interfacce di rete..."
+echo "# Rilevamento interfacce di rete..." | tee -a $F
 ipv4=$(ip a | grep -e 'inet\W' | sed '/.*lo$/d' | awk '{ print $2 }'| sed 's/\/[0-9][0-9]//')
 ipv6=$(ip a | grep -e 'inet\w' | sed '/.*::1\/128.*/d' | awk '{ print $2 }'| sed 's/\/[0-9][0-9]//')
 
-echo "# Indirizzi ipv4"
-echo $ipv4
-echo "# Indirizzi ipv6"
-echo $ipv6
-
-ping -c 1 google.it
-if [ ! $? -eq 0 ]
-then
-    echo "# Attenzione! DNS non risolve i nomi! [KO]"
-fi
+echo "# Indirizzi ipv4" | tee -a $F
+echo $ipv4 | tee -a $F
+echo "# Indirizzi ipv6" | tee -a $F
+echo $ipv6 | tee -a $F
 
 ping -c 1 1.1.1.1
 if [ ! $? -eq 0 ]
 then
-    echo "# Attenzione! Connessione Internet assente! [KO]"
+    echo "# Attenzione! Connessione Internet assente! [KO]" | tee -a $F
+else
+    echo "# Connessione Internet presente. [OK]"
+fi
+
+ping -c 1 google.it
+if [ ! $? -eq 0 ]
+then
+    echo "# Attenzione! DNS non risolve i nomi! [KO]" | tee -a $F
+else
+    echo "# Risoluzione DNS esterna a posto. [OK]"
 fi
 
 # Controllo connessioni attive
 # Connessioni in uscita
-echo "# Connessioni attive..."
-netstat -anp | grep -e '.*ESTABLISHED.*'
+echo "# Connessioni attive..." | tee -a $F
+netstat -anp | grep -e '.*ESTABLISHED.*' | tee -a $F
 
 # Processi in ascolto
-echo "# Connessioni in ascolto"
-netstat -nlp | grep 'tcp.*LISTEN.*'
-netstat -nlp | grep 'udp.*LISTEN.*'
+echo "# Connessioni in ascolto" | tee -a $F
+netstat -nlp | grep 'tcp.*LISTEN.*' | tee -a $F
+netstat -nlp | grep 'udp.*LISTEN.*' | tee -a $F
 
 # DateTime control
 U=$(curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $5 " " $6 }')
 L=$(date -u +"%d %Y %T")
 if [[ $U != $L ]]
 then
-    echo "# Attenzione! Orologio di sistema non sincronizzato. [3]"
-    curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $4 " " $5 " " $6 " - Orario corretto"}';echo $(date -u +"%d %b %Y %T")" - Orario di sistema"
+    echo "# Attenzione! Orologio di sistema non sincronizzato. [3]" | tee -a $F
+    curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $4 " " $5 " " $6 " - Orario corretto"}' | tee -a $F;echo $(date -u +"%d %b %Y %T")" - Orario di sistema" | tee -a $F
 else
     echo "# Orario di sistema sincronizzato [OK]"
 fi
@@ -119,15 +124,15 @@ do
     df -h | grep $i
     ;;
     [5-6][0-9])
-    echo "# Attenzione, spazio disco in esaurimento! [1]"
+    echo "# Attenzione, spazio disco in esaurimento! [1]" | tee -a $F
     df -h | grep $i
     ;;
     [7-9][0-9])
-    echo "### ATTENZIONE! ### Spazio su disco ridotto! [3]"
+    echo "### ATTENZIONE! ### Spazio su disco ridotto! [3]" | tee -a $F
     df -h | grep $i
     ;;
     100)
-    echo "### Errore Critico! Spazio esaurito! [KO]"
+    echo "### Errore Critico! Spazio esaurito! [KO]" | tee -a $F
     ;;
     *)
     echo "# Spazio su disco sufficiente [OK]"
@@ -146,10 +151,10 @@ echo $P"%"
 
 case $P in
 [7-8][0-9])
-echo "# Attenzione, Elevato utilizzo memoria RAM! [2]"
+echo "# Attenzione, Elevato utilizzo memoria RAM! [2]" | tee -a $F
 ;;
 9[0-9])
-echo "# Attenzione, Utilizzo RAM Critico! [3]"
+echo "# Attenzione, Utilizzo RAM Critico! [3]" | tee -a $F
 ;;
 *)
 echo "# Livelli utilizzo RAM nella norma. [OK]"
@@ -163,10 +168,10 @@ echo $C"%"
 
 case $C in
 [5-7][0-9],[0-9])
-echo "# Attenzione, utilizzo CPU oltre la media [1]"
+echo "# Attenzione, utilizzo CPU oltre la media [1]" | tee -a $F
 ;;
 [8-9][0-9],[0-9])
-echo "# Attenzione, livelli CPU Critici [3]"
+echo "# Attenzione, livelli CPU Critici [3]" | tee -a $F
 ;;
 *)
 echo "# Livelli utilizzo CPU normali [OK]"
@@ -177,31 +182,34 @@ esac
 case in distro
 debian)
 apt-get update
-echo # Upgradable packages:
-apt list --upgradeable
+echo "# Upgradable packages:" | tee -a $F
+apt list --upgradeable | tee -a $F
 ;;
 arch)
 pacman -S
-echo # Upgradable packages:
+echo "# Upgradable packages:" | tee -a $F
 ;;
 alpine)
 apk update
-echo # Upgradable packages:
-apk list -u
+echo "# Upgradable packages:" | tee -a $F
+apk list -u | tee -a $F
 ;;
 fedora)
-dnf check-upgrade
+echo "# Upgradable packages:" | tee -a $F
+dnf check-upgrade | tee -a $F
 ;;
 *)
-echo "# Controllo aggiornamenti non disponibile per questa distribuzione..."
+echo "# Controllo aggiornamenti non disponibile per questa distribuzione..." | tee -a $F
 ;;
 esac
 
 # Security auditing
-/opt/lynis/lynis audit system
+/opt/lynis/lynis audit system > /dev/null
+echo "### Lynis Security Auditing ###" | tee -a $F
+echo "# --- Attenzione:" | tee -a $F
+cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=//g' | tee -a $F
 
-echo "# Attenzione:"
-cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=//g'
+echo "# --- Suggerimenti:" | tee -a $F
+cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=//g' | tee -a $F
 
-echo "# Suggerimenti:"
-cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=//g'
+less $F
