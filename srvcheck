@@ -1,22 +1,111 @@
 #!/bin/bash
 
 ## - TODO - ##
-# Date Time control
-# Storage space control
-# CPU/RAM Consumption control
-# Update control
+# V Date Time control
+# V Storage space control
+# V CPU/RAM Consumption control
+# V Update control
 # Backups control
 # Security check
 # Format data for reporting
 
+# Error leveling:
+# [OK] No errors
+# [1] Warning, probable future malfunctioning
+# [2] Warning, probable ongoing malfunctioning
+# [3] Critical Warning, system failures are near!
+# [KO] Not functioning, stopped, broken
+
+# Check root permission
+p=$(id | awk '{ print $1 }')
+if [ $p != "uid=0(root)" ]
+then
+    echo "# Eseguire con privilegi di root!"
+    exit 0
+fi
+
+# Check dependencies
+if [ ! -e /usr/bin/top ]
+then
+    echo "# Installare il comando top"
+    exit 0
+fi
+
+if [ ! -e /opt/lynis/lynis ]
+then
+    echo "# Installare lynis"
+    exit 0
+fi
+
+if [ ! -e /usr/bin/netstat ]
+then
+    echo "# Installare il comando netstat"
+    exit 0
+fi
+
+# Check report dir
+if [ ! -d /var/log/srvcheck ]
+then
+    mkdir /var/log/srvcheck
+fi
+
 # Set report file
 F=/var/log/srvcheck/srvchk-$(date +%Y_%M_%d).txt
+
+# Set linux distro! (debian, arch, alpine, oracle)
+distro=$(cat /etc/os-release | grep '^ID.*' | sed s/ID=//)
 
 # Initialize report file
 touch $F
 
+# Machine informations
+echo $HOSTNAME
+uname -s -r -p -o
+echo "# Ore di attività:"
+uptime -p
+
+# Internet connection control
+echo "# Rilevamento interfacce di rete..."
+ipv4=$(ip a | grep -e 'inet\W' | sed '/.*lo$/d' | awk '{ print $2 }'| sed 's/\/[0-9][0-9]//')
+ipv6=$(ip a | grep -e 'inet\w' | sed '/.*::1\/128.*/d' | awk '{ print $2 }'| sed 's/\/[0-9][0-9]//')
+
+echo "# Indirizzi ipv4"
+echo $ipv4
+echo "# Indirizzi ipv6"
+echo $ipv6
+
+ping -c 1 google.it
+if [ ! $? -eq 0 ]
+then
+    echo "# Attenzione! DNS non risolve i nomi! [KO]"
+fi
+
+ping -c 1 1.1.1.1
+if [ ! $? -eq 0 ]
+then
+    echo "# Attenzione! Connessione Internet assente! [KO]"
+fi
+
+# Controllo connessioni attive
+# Connessioni in uscita
+echo "# Connessioni attive..."
+netstat -anp | grep -e '.*ESTABLISHED.*'
+
+# Processi in ascolto
+echo "# Connessioni in ascolto"
+netstat -nlp | grep 'tcp.*LISTEN.*'
+netstat -nlp | grep 'udp.*LISTEN.*'
+
 # DateTime control
-date
+U=$(curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $5 " " $6 }')
+L=$(date -u +"%d %Y %T")
+if [[ $U != $L ]]
+then
+    echo "# Attenzione! Orologio di sistema non sincronizzato. [3]"
+    curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $4 " " $5 " " $6 " - Orario corretto"}';echo $(date -u +"%d %b %Y %T")" - Orario di sistema"
+else
+    echo "# Orario di sistema sincronizzato [OK]"
+fi
 
 # Storage space control
 s=('.*/$' '.*/home$' '.*/tmp$' '.*/boot$')
@@ -26,22 +115,93 @@ do
     d=$(df -h | grep $i | awk '{ print $5 }' | sed 's/%//')
     case $d in
     [1-4][0-9])
-    echo "# Spazio disco sufficiente"
+    echo "# Spazio disco sufficiente [OK]"
     df -h | grep $i
     ;;
     [5-6][0-9])
-    echo "# Attenzione, spazio disco in esaurimento!"
+    echo "# Attenzione, spazio disco in esaurimento! [1]"
     df -h | grep $i
-    echo "# Riporto l'avviso"
-
     ;;
     [7-9][0-9])
-    echo "### ATTENZIONE! Spazio su disco ridotto! ###"
+    echo "### ATTENZIONE! ### Spazio su disco ridotto! [3]"
     df -h | grep $i
     ;;
+    100)
+    echo "### Errore Critico! Spazio esaurito! [KO]"
+    ;;
     *)
-    echo "# Spazio su disco sufficiente"
+    echo "# Spazio su disco sufficiente [OK]"
     df -h | grep $i
     ;;
     esac
 done
+
+# Memory usage
+echo "# Utilizzo memoria RAM"
+T=$(free | grep 'Mem.*' | awk '{ print $2}')
+U=$(free | grep 'Mem.*' | awk '{ print $3}')
+P=$(( U *100 / T ))
+
+echo $P"%"
+
+case $P in
+[7-8][0-9])
+echo "# Attenzione, Elevato utilizzo memoria RAM! [2]"
+;;
+9[0-9])
+echo "# Attenzione, Utilizzo RAM Critico! [3]"
+;;
+*)
+echo "# Livelli utilizzo RAM nella norma. [OK]"
+;;
+esac
+
+# CPU usage
+echo "# Utilizzo CPU:"
+C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
+echo $C"%"
+
+case $C in
+[5-7][0-9],[0-9])
+echo "# Attenzione, utilizzo CPU oltre la media [1]"
+;;
+[8-9][0-9],[0-9])
+echo "# Attenzione, livelli CPU Critici [3]"
+;;
+*)
+echo "# Livelli utilizzo CPU normali [OK]"
+;;
+esac
+
+# Update control
+case in distro
+debian)
+apt-get update
+echo # Upgradable packages:
+apt list --upgradeable
+;;
+arch)
+pacman -S
+echo # Upgradable packages:
+;;
+alpine)
+apk update
+echo # Upgradable packages:
+apk list -u
+;;
+fedora)
+dnf check-upgrade
+;;
+*)
+echo "# Controllo aggiornamenti non disponibile per questa distribuzione..."
+;;
+esac
+
+# Security auditing
+/opt/lynis/lynis audit system
+
+echo "# Attenzione:"
+cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=//g'
+
+echo "# Suggerimenti:"
+cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=//g'
