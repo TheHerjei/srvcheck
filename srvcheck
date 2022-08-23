@@ -4,8 +4,9 @@
 # V Date Time control
 # V Storage space control
 # V CPU/RAM Consumption control
+# Running services control
 # V Update control
-# Backups control
+# V Backups control
 # V Security check
 # V Format data for reporting
 
@@ -39,8 +40,11 @@ fi
 
 if [ ! -e /usr/bin/netstat ]
 then
-    echo "# Installare il comando netstat [KO]"
-    exit 0
+    if [ ! -e /bin/netstat ]
+    then
+        echo "# Installare il comando netstat [KO]"
+        exit 0
+    fi
 fi
 
 if [ ! -e /usr/bin/restic ]
@@ -69,7 +73,7 @@ echo -e "##### - $F - #####\n" | tee -a $F
 echo -e "## - INFORMAZIONI SULLA MACCHINA - ##\n" | tee -a $F
 echo "# - NOME MACCHINA: "$HOSTNAME | tee -a $F
 echo "# - VERSIONE KERNEL: "$(uname -s -r) | tee -a $F
-echo "# Ore di attività: "$(uptime -p) | tee -a $F
+echo "# Ore di attività: "$(uptime) | tee -a $F
 echo "# Nome distribuzione rilevato: "$distro | tee -a $F
 
 # Internet connection control
@@ -128,7 +132,7 @@ s=('.*/$' '.*/home$' '.*/tmp$' '.*/boot$')
 
 for i in "${s[@]}"
 do
-    d=$(df -h | grep $i | awk '{ print $5 }' | sed 's/%//')
+    d=$(df | grep -e $i | awk '{ print $5 }' | sed 's/%//')
     echo -e "\nMount "$i" Spazio usato: "$d"%" | sed 's/[\.\*$]//g' | tee -a $F
     case $d in
     [1-4][0-9])
@@ -186,6 +190,44 @@ echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
 ;;
 *)
 echo "# Livelli utilizzo CPU normali [OK]"
+;;
+esac
+
+# Running service control
+
+case $distro in
+alpine)
+S=$(rc-status | grep -e '.*\[  stopped  \]$' | awk '{ print $1 }')
+if [[ ! ${#S} -eq 0 ]]
+then
+    echo -e "!!! Attenzione !!! Alcuni servizi risultano Stoppati [KO]" | tee -a $F
+    echo -e $S"\n" | tee -a $F
+else
+    echo -e "Servizi in esecuzione normalmente [OK]"
+fi
+;;
+debian)
+S=$(systemctl list-units --state=failed | grep -e '.*service$' | awk '{ print $2 }')
+if [[ ! ${#S} -eq 0 ]]
+then
+    echo -e "!!! Attenzione !!! Alcuni servizi risultano Stoppati [KO]" | tee -a $F
+    echo -e $S"\n" | tee -a $F
+else
+    echo -e "Servizi in esecuzione normalmente [OK]"
+fi
+;;
+fedora)
+S=$(systemctl list-units --state=failed | grep -e '.*service$' | awk '{ print $2 }')
+if [[ ! ${#S} -eq 0 ]]
+then
+    echo -e "!!! Attenzione !!! Alcuni servizi risultano Stoppati [KO]" | tee -a $F
+    echo -e $S"\n" | tee -a $F
+else
+    echo -e "Servizi in esecuzione normalmente [OK]"
+fi
+;;
+*)
+echo -e "Distribuzione non supportata per questo controllo [KO]" | tee -a $F
 ;;
 esac
 
