@@ -43,6 +43,12 @@ then
     exit 0
 fi
 
+if [ ! -e /usr/bin/restic ]
+then
+    echo "# Installare il comando restic [KO]"
+    exit 0
+fi
+
 # Check report dir
 if [ ! -d /var/log/srvcheck ]
 then
@@ -209,6 +215,49 @@ dnf check-upgrade | tee -a $F
 echo "# Controllo aggiornamenti non disponibile per questa distribuzione..." | tee -a $F
 ;;
 esac
+
+# Backups control
+echo -e "\n## - CONTROLLO BACKUPS - ##\n" | tee -a $F
+
+if [ -f /var/log/restic.log ]
+then 
+    B=$(cat /var/log/restic.log | grep -e '.*snapshots$' | tail -n 1 | awk '{ print $1 }')
+    T=$(cat /var/log/restic.log | tail -n 3 | head -n 1 | awk '{ print $2 }')
+    if [[ ! $T = $(date +%Y-%m-%d) ]]
+    then
+        echo -e "!!! Attenzione !!! Ultimo backup non è del giorno corrente [1]\n" | tee -a $F
+        if [[ $T = $(date "yesterday" +%Y-%m-%d) ]]
+        then
+            echo -e "!!! Attenzione !!! Ultimo backup datato a ieri [1]\n" | tee -a $F
+        else
+            echo -e "!!! Attenzione !!! Ultimo backup datato $T [3]\n" | tee -a $F
+        fi
+    fi
+else
+    B=0
+    echo -e "\n!!! Attenzione !!! Non è presente il file log di backup [KO]\n" | tee -a $F
+fi
+
+case $B in
+0)
+echo -e "!!! Attenzione !!! non sono presenti snapshots! [3]\n"
+;;
+[1-9])
+echo -e "# Attenzione, presenti solo $B snapshots! [2]" | tee -a $F
+;;
+[1-4][0-9])
+echo -e "# Conteggio snapshots nella norma $B. [OK]"
+;;
+[5-9][0-9])
+echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -a $F
+;;
+*)
+echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -a $F
+;;
+esac
+
+echo -e "## - RESTIC LOG - ##\n"
+cat /var/log/restic.log | tee -a $F
 
 # Security auditing
 echo -e "\n## - CONTROLLO SICUREZZA - ##\n" | tee -a $F
