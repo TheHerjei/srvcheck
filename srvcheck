@@ -4,7 +4,7 @@
 # V Date Time control
 # V Storage space control
 # V CPU/RAM Consumption control
-# Running services control
+# V Running services control
 # V Update control
 # V Backups control
 # V Security check
@@ -178,10 +178,31 @@ echo "# Livelli utilizzo RAM nella norma. [OK]"
 esac
 
 # CPU usage
+C=0
+case $distro in
+alpine)
+C=$(top -n 1 | head -n 2 | tail -n 1 | awk '{ print $2 }' | sed 's/%//')
+;;
+debian)
 C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
+;;
+*)
+echo -e "# Distribuzione non supportata. [KO]\n" | tee -a $F
+;;
+esac
+
 echo "# Utilizzo CPU: "$C"%" | tee -a $F
 
 case $C in
+[5-7][0-9])
+echo "# Attenzione, utilizzo CPU oltre la media [1]" | tee -a $F
+;;
+[8-9][0-9])
+echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
+;;
+100)
+echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
+;;
 [5-7][0-9],[0-9])
 echo "# Attenzione, utilizzo CPU oltre la media [1]" | tee -a $F
 ;;
@@ -233,25 +254,30 @@ esac
 
 # Update control
 echo -e "\n## - CONTROLLO AGGIORNAMENTI - ##\n" | tee -a $F
+U=0
 
 case $distro in
 debian)
 apt-get update
-echo -e "# Aggiornamenti disponibili:\n" | tee -a $F
-apt list --upgradeable | tee -a $F
-;;
-arch)
-pacman -S
-echo -e "# Aggiornamenti disponibili:\n" | tee -a $F
+U=$(apt list --upgradeable)
+if [[ ${#U} -eq 0 ]]
+then
+    echo -e "# Nessun aggiornamento disponibile [OK]\n"
+else
+    echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
+    apt list --upgradeable | tee -a $F
+fi
 ;;
 alpine)
 apk update
-echo -e "# Aggiornamenti disponibili:\n" | tee -a $F
-apk list -u | tee -a $F
-;;
-fedora)
-echo -e "# Aggiornamenti disponibili:\n" | tee -a $F
-dnf check-upgrade | tee -a $F
+U=$(apk list -u)
+if [[ ${#U} -eq 0 ]]
+then
+    echo -e "# Nessun aggiornamento disponibile [OK]\n"
+else
+    echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
+    apk list -u| tee -a $F
+fi
 ;;
 *)
 echo "# Controllo aggiornamenti non disponibile per questa distribuzione..." | tee -a $F
