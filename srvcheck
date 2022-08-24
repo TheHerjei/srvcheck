@@ -82,7 +82,7 @@ echo -e "##### - $F - #####\n" | tee -a $F
 echo -e "## - INFORMAZIONI SULLA MACCHINA - ##\n" | tee -a $F
 echo "# - NOME MACCHINA: "$HOSTNAME | tee -a $F
 echo "# - VERSIONE KERNEL: "$(uname -s -r) | tee -a $F
-echo "# Ore di attività: "$(uptime | awk '{ print $2 $3 $4 $5 }') | tee -a $F
+echo "# Ore di attività: "$(uptime | awk '{ print $2 " " $3 " " $4 " " $5 }') | tee -a $F
 echo "# Nome distribuzione rilevato: "$distro | tee -a $F
 
 # Internet connection control
@@ -362,7 +362,7 @@ echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -
 ;;
 esac
 
-echo -e "## - RESTIC LOG - ##\n"
+echo -e "## - RESTIC LOG - ##\n" | tee -a $F
 cat /var/log/restic.log | tee -a $F
 
 # Security auditing
