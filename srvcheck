@@ -340,6 +340,7 @@ esac
 # Backups control
 echo -e "\n## - CONTROLLO BACKUPS - ##\n" | tee -a $F
 
+echo -e "# Restic Backups...\n" | tee -a $F
 if [ -f /var/log/restic.log ]
 then 
     B=$(cat /var/log/restic.log | grep -e '.*snapshots$' | tail -n 1 | awk '{ print $1 }')
@@ -386,7 +387,7 @@ fi
 if [ -d /var/lib/vz/dump ]
 then
     B=$(ls /var/lib/vz/dump | grep -e '.*zst$' | wc -l)
-    echo -e "# Rilevati " $B "backups Proxmox\n"
+    echo -e "# Rilevati " $B "backups Proxmox\n" |tee -a $F
     ls /var/lib/vz/dump | grep -e '.*zst$'
     case $B in
     0)
@@ -411,6 +412,7 @@ fi
 echo -e "\n## - CONTROLLO SICUREZZA - ##\n" | tee -a $F
 
 cd /opt/lynis/
+echo "Controllo di sicurezza in corso..."
 sh lynis audit system > /dev/null
 echo -e "# --- Attenzione:\n" | tee -a $F
 cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=//g' | tee -a $F
