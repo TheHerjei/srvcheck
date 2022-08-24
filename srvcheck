@@ -361,7 +361,7 @@ fi
 
 case $B in
 0)
-echo -e "!!! Attenzione !!! non sono presenti snapshots! [3]\n"
+echo -e "!!! Attenzione !!! non sono presenti snapshots! [3]\n" | tee -a $F
 ;;
 [1-9])
 echo -e "# Attenzione, presenti solo $B snapshots! [2]" | tee -a $F
@@ -377,8 +377,35 @@ echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -
 ;;
 esac
 
-echo -e "## - RESTIC LOG - ##\n" | tee -a $F
-cat /var/log/restic.log | tee -a $F
+if [ -f /var/log/restic.log ]
+then
+    echo -e "## - RESTIC LOG - ##\n" | tee -a $F
+    cat /var/log/restic.log | tee -a $F
+fi
+
+if [ -d /var/lib/vz/dump ]
+then
+    B=$(ls /var/lib/vz/dump | grep -e '.*zst$' | wc -l)
+    echo -e "# Rilevati " $B "backups Proxmox\n"
+    ls /var/lib/vz/dump | grep -e '.*zst$'
+    case $B in
+    0)
+    echo -e "!!! Attenzione !!! non sono presenti backups! [3]\n" | tee -a $F
+    ;;
+    [1-9])
+    echo -e "# Attenzione, presenti solo $B backups! [2]" | tee -a $F
+    ;;
+    [1-4][0-9])
+    echo -e "# Conteggio backups nella norma $B. [OK]"
+    ;;
+    [5-9][0-9])
+    echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -a $F
+    ;;
+    *)
+    echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -a $F
+    ;;
+    esac
+fi
 
 # Security auditing
 echo -e "\n## - CONTROLLO SICUREZZA - ##\n" | tee -a $F
