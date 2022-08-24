@@ -73,7 +73,7 @@ echo -e "##### - $F - #####\n" | tee -a $F
 echo -e "## - INFORMAZIONI SULLA MACCHINA - ##\n" | tee -a $F
 echo "# - NOME MACCHINA: "$HOSTNAME | tee -a $F
 echo "# - VERSIONE KERNEL: "$(uname -s -r) | tee -a $F
-echo "# Ore di attività: "$(uptime) | tee -a $F
+echo "# Ore di attività: "$(uptime | awk '{ print $2 $3 $4 $5 }') | tee -a $F
 echo "# Nome distribuzione rilevato: "$distro | tee -a $F
 
 # Internet connection control
@@ -215,6 +215,7 @@ echo "# Livelli utilizzo CPU normali [OK]"
 esac
 
 # Running service control
+echo -e "\n## - CONTROLLO SERVIZI - ##\n" | tee -a $F
 
 case $distro in
 alpine)
@@ -294,7 +295,7 @@ then
     if [[ ! $T = $(date +%Y-%m-%d) ]]
     then
         echo -e "!!! Attenzione !!! Ultimo backup non è del giorno corrente [1]\n" | tee -a $F
-        if [[ $T = $(date "yesterday" +%Y-%m-%d) ]]
+        if [[ $T = $(date -d 'yesterday' +%Y-%m-%d) ]]
         then
             echo -e "!!! Attenzione !!! Ultimo backup datato a ieri [1]\n" | tee -a $F
         else
