@@ -26,17 +26,30 @@ echo "# Eseguire con privilegi di root! [KO]"
 fi
 
 # Check dependencies
+missing=0
 if [ ! -e /usr/bin/top ]
 then
     echo "# Installare il comando top [KO]"
-    exit 0
+    let missing++
+fi
+
+if [ ! -e /usr/bin/curl ]
+then
+    echo "# Installare il comando curl [KO]"
+    let missing++
+fi
+
+if [ ! -e /usr/bin/rsync ]
+then
+    echo "# Installare il comando rsync [KO]"
+    let missing++
 fi
 
 if [ ! -e /opt/lynis/lynis ]
 then
     echo "# Installare lynis [KO]"
     echo "git clone https://github.com/CISOfy/lynis.git"
-    exit 0
+    let missing++
 fi
 
 if [ ! -e /usr/bin/netstat ]
@@ -46,7 +59,7 @@ then
         echo "# Installare il comando netstat [KO]"
         echo "apt install net-tools"
         echo "apk add iputils"
-        exit 0
+        let missing++
     fi
 fi
 
@@ -55,7 +68,7 @@ then
     echo "# Installare il comando restic [KO]"
     echo "apt install restic"
     echo "apk add restic"
-    exit 0
+    let missing++
 fi
 
 # Check report dir
@@ -75,8 +88,13 @@ then
     if [ ! -e /usr/bin/coreutils ]
     then
         echo "# Installare il pacchetto coreutils [KO]"
-        exit 0
+        let missing++
     fi
+fi
+
+if [[ ! $missing -eq 0 ]]
+then
+    exit 0
 fi
 
 # Initialize report file
