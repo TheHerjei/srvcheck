@@ -35,6 +35,7 @@ fi
 if [ ! -e /opt/lynis/lynis ]
 then
     echo "# Installare lynis [KO]"
+    echo "git clone https://github.com/CISOfy/lynis.git"
     exit 0
 fi
 
@@ -43,6 +44,8 @@ then
     if [ ! -e /bin/netstat ]
     then
         echo "# Installare il comando netstat [KO]"
+        echo "apt install net-tools"
+        echo "apk add iputils"
         exit 0
     fi
 fi
@@ -50,6 +53,8 @@ fi
 if [ ! -e /usr/bin/restic ]
 then
     echo "# Installare il comando restic [KO]"
+    echo "apt install restic"
+    echo "apk add restic"
     exit 0
 fi
 
@@ -137,30 +142,40 @@ fi
 
 # Storage space control
 echo -e "\n## - SPAZIO SU DISCO - ##\n" | tee -a $F
-s=('.*/$' '.*/home$' '.*/tmp$' '.*/boot$')
+s=('.*/$' '.*/home$' '.*/tmp$' '.*/boot$' '.*/share/.*' '.*/bkp$' '.*/mnt/.*')
 
 for i in "${s[@]}"
 do
     d=$(df | grep -e $i | awk '{ print $5 }' | sed 's/%//')
-    echo -e "\nMount "$i" Spazio usato: "$d"%" | sed 's/[\.\*$]//g' | tee -a $F
-    case $d in
-    [1-4][0-9])
-    echo "# Spazio disco sufficiente [OK]"
-    ;;
-    [5-6][0-9])
-    echo "# Attenzione, spazio disco in esaurimento! [1]" | tee -a $F
-    ;;
-    [7-9][0-9])
-    echo "### ATTENZIONE! ### Spazio su disco ridotto! [3]" | tee -a $F
-    ;;
-    100)
-    echo "### Errore Critico! Spazio esaurito! [KO]" | tee -a $F
-    ;;
-    *)
-    echo "# Spazio su disco sufficiente [OK]"
-    ;;
-    esac
+    if [[ ! ${#d} -eq 0 ]]
+    then
+        echo -e "\nMount "$i" Spazio usato: "$d"%" | sed 's/[\.\*$]//g' | tee -a $F
+        case $d in
+        [1-4][0-9])
+        echo "# Spazio disco sufficiente [OK]"
+        ;;
+        [5-6][0-9])
+        echo "# Attenzione, spazio disco in esaurimento! [1]" | tee -a $F
+        ;;
+        [7-9][0-9])
+        echo "### ATTENZIONE! ### Spazio su disco ridotto! [3]" | tee -a $F
+        ;;
+        100)
+        echo "### Errore Critico! Spazio esaurito! [KO]" | tee -a $F
+        ;;
+        *)
+        echo "# Spazio su disco sufficiente [OK]"
+        ;;
+        esac
+    fi
 done
+
+# Volume group control
+if [ -e /usr/sbin/vgdisplay ]
+then
+    echo -e "\n## Utilizzo Volume groups" | tee -a $F
+    vgdisplay | grep -e 'VG Name.*\|Free.*' | tee -a $F
+fi
 
 echo -e "\n## - UTILIZZO RISORSE - ##\n" | tee -a $F
 
@@ -368,7 +383,8 @@ cat /var/log/restic.log | tee -a $F
 # Security auditing
 echo -e "\n## - CONTROLLO SICUREZZA - ##\n" | tee -a $F
 
-/opt/lynis/lynis audit system > /dev/null
+cd /opt/lynis/
+sh lynis audit system > /dev/null
 echo -e "# --- Attenzione:\n" | tee -a $F
 cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=//g' | tee -a $F
 
