@@ -65,6 +65,15 @@ F=/var/log/srvcheck/srvchk-$(date +%Y_%m_%d).txt
 # Set linux distro! (debian, arch, alpine, oracle)
 distro=$(cat /etc/os-release | grep '^ID.*' | sed s/ID=//)
 
+if [[ $distro = 'alpine' ]]
+then
+    if [ ! -e /usr/bin/coreutils ]
+    then
+        echo "# Installare il pacchetto coreutils [KO]"
+        exit 0
+    fi
+fi
+
 # Initialize report file
 touch $F
 
@@ -177,6 +186,18 @@ echo "# Livelli utilizzo RAM nella norma. [OK]"
 ;;
 esac
 
+case $distro in
+alpine)
+top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
+;;
+debian)
+top -bn 1 -o %MEM | head -n 12 | tail -n 6 | tee -a $F
+;;
+*)
+echo -e "# Distribuzione non supportata. [KO]\n" | tee -a $F
+;;
+esac
+
 # CPU usage
 C=0
 case $distro in
@@ -199,18 +220,34 @@ echo "# Attenzione, utilizzo CPU oltre la media [1]" | tee -a $F
 ;;
 [8-9][0-9])
 echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
+top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
 ;;
 100)
 echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
+top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
 ;;
 [5-7][0-9],[0-9])
 echo "# Attenzione, utilizzo CPU oltre la media [1]" | tee -a $F
+top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
 ;;
 [8-9][0-9],[0-9])
 echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
+top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
 ;;
 *)
 echo "# Livelli utilizzo CPU normali [OK]"
+;;
+esac
+
+case $distro in
+alpine)
+top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
+;;
+debian)
+top -bn 1 -o %CPU | head -n 12 | tail -n 6 | tee -a $F
+;;
+*)
+echo -e "# Distribuzione non supportata. [KO]\n" | tee -a $F
 ;;
 esac
 
