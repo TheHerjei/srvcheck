@@ -87,7 +87,7 @@ echo -e "##### - $F - #####\n" | tee -a $F
 echo -e "## - INFORMAZIONI SULLA MACCHINA - ##\n" | tee -a $F
 echo "# - NOME MACCHINA: "$HOSTNAME | tee -a $F
 echo "# - VERSIONE KERNEL: "$(uname -s -r) | tee -a $F
-echo "# Ore di attività: "$(uptime | awk '{ print $2 " " $3 " " $4 " " $5 }') | tee -a $F
+echo "# Ore di attivita': "$(uptime | awk '{ print $2 " " $3 " " $4 " " $5 }') | tee -a $F
 echo "# Nome distribuzione rilevato: "$distro | tee -a $F
 
 # Internet connection control
@@ -347,7 +347,7 @@ then
     T=$(cat /var/log/restic.log | tail -n 3 | head -n 1 | awk '{ print $2 }')
     if [[ ! $T = $(date +%Y-%m-%d) ]]
     then
-        echo -e "!!! Attenzione !!! Ultimo backup non è del giorno corrente [1]\n" | tee -a $F
+        echo -e "!!! Attenzione !!! Ultimo backup non e' del giorno corrente [1]\n" | tee -a $F
         if [[ $T = $(date -d 'yesterday' +%Y-%m-%d) ]]
         then
             echo -e "!!! Attenzione !!! Ultimo backup datato a ieri [1]\n" | tee -a $F
@@ -357,7 +357,7 @@ then
     fi
 else
     B=0
-    echo -e "\n!!! Attenzione !!! Non è presente il file log di backup [KO]\n" | tee -a $F
+    echo -e "\n!!! Attenzione !!! Non e' presente il file log di backup [KO]\n" | tee -a $F
 fi
 
 case $B in
