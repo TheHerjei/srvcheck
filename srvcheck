@@ -421,18 +421,17 @@ echo -e "# --- Suggerimenti:\n" | tee -a $F
 cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=//g' | tee -a $F
 
 # Send report to server! Change the log server name!
-#rsync -zav /var/log/srvcheck/ myuser@my.server.com:/var/log/srvcheck/$HOSTNAME/
+rsync -zav /var/log/srvcheck/ myuser@my.server.com:3333/var/log/srvcheck/$HOSTNAME/
 
 # Send report to Telegram account! Change the fields before run!
-domain="Domain"
-bot="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-chat="XXXXXXXXXXXXXXXX"
-message="Server:%20$HOSTNAME%20Dominio:%20$domain"
+#domain="Domain"
+#bot="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+#chat="XXXXXXXXXXXXXXXX"
+#message="Server:%20$HOSTNAME%20Dominio:%20$domain"
+#payload="https://api.telegram.org/bot$bot/sendMessage?chat_id=$chat&text=$message"
+#curl $payload
+#curl -v -F "chat_id=$chat" -F document=@$F https://api.telegram.org/bot$bot/sendDocument
 
-payload="https://api.telegram.org/bot$bot/sendMessage?chat_id=$chat&text=$message"
-curl -v -F "chat_id=$chat" -F document=@$F https://api.telegram.org/bot$bot/sendDocument
-
-curl $payload
 
 echo -e "\n\nPer leggere subito il log digitare:\n"
 echo "less $F"
