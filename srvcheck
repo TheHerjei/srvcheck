@@ -420,4 +420,8 @@ cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=//g' | tee
 echo -e "# --- Suggerimenti:\n" | tee -a $F
 cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=//g' | tee -a $F
 
-less $F
+# Send report to server! Change the log server name!
+rsync -zav /var/log/srvcheck/ myuser@my.server.com:/var/log/srvcheck/$HOSTNAME/
+
+echo -e "\n\nPer leggere subito il log digitare:\n"
+echo "less $F"
