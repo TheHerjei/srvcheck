@@ -105,7 +105,7 @@ echo -e "##### - $F - #####\n" | tee -a $F
 echo -e "## - INFORMAZIONI SULLA MACCHINA - ##\n" | tee -a $F
 echo "# - NOME MACCHINA: "$HOSTNAME | tee -a $F
 echo "# - VERSIONE KERNEL: "$(uname -s -r) | tee -a $F
-echo "# Ore di attivita': "$(uptime | awk '{ print $2 " " $3 " " $4 " " $5 }') | tee -a $F
+echo "# Ore di attivita': "$(uptime | awk '{ print $2 " " $3 " " $4 }') | tee -a $F
 echo "# Nome distribuzione rilevato: "$distro | tee -a $F
 
 # Internet connection control
@@ -160,14 +160,14 @@ fi
 
 # Storage space control
 echo -e "\n## - SPAZIO SU DISCO - ##\n" | tee -a $F
-s=('.*/$' '.*/home$' '.*/tmp$' '.*/boot$' '.*/share/.*' '.*/bkp$' '.*/mnt/.*')
+s=('.*/$' '.*/home$' '.*/tmp$' '.*boot$' '.*/share.*' '.*/bkp$' '.*/mnt.*')
 
 for i in "${s[@]}"
 do
     d=$(df | grep -e $i | awk '{ print $5 }' | sed 's/%//')
     if [[ ! ${#d} -eq 0 ]]
     then
-        echo -e "\nMount "$i" Spazio usato: "$d"%" | sed 's/[\.\*$]//g' | tee -a $F
+        echo -e "\nMount "$(df | grep -e $i | awk '{ print $6 }')" Spazio usato: "$d"%" | sed 's/[\.\*$]//g' | tee -a $F
         case $d in
         [1-4][0-9])
         echo "# Spazio disco sufficiente [OK]"
