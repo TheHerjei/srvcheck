@@ -273,7 +273,7 @@ E="Inserire utente del log server"
 display_print
 
 message="Configurazione..."
-percentage=30
+percentage=20
 progress_bar
 echo -e "\n\n"
 read ssh_user
@@ -283,7 +283,7 @@ E="Inserire indirizzo log server"
 display_print
 
 message="Configurazione..."
-percentage=40
+percentage=30
 progress_bar
 echo -e "\n\n"
 read ssh_server
@@ -293,7 +293,7 @@ E="Inserire porta ssh di $ssh_server"
 display_print
 
 message="Configurazione..."
-percentage=50
+percentage=40
 progress_bar
 echo -e "\n\n"
 read ssh_port
@@ -304,7 +304,7 @@ E="Scambio chiavi..."
 display_print
 
 message="Scambio chiavi SSH..."
-percentage=60
+percentage=50
 progress_bar
 
 ssh-keygen -A rsa -f /root/.ssh/id_rsa.pub
@@ -312,7 +312,7 @@ ssh-keygen -A rsa -f /root/.ssh/id_rsa.pub
 S="Configurazione srvcheck..."
 E="Scambio chiavi..."
 display_print
-percentage=70
+percentage=60
 progress_bar
 
 ssh_key=$(cat /root/.ssh/id_rsa.pub)
@@ -322,11 +322,61 @@ S="Configurazione srvcheck..."
 E="Aggiorno script srvchk..."
 display_print
 message="Concludo..."
-percentage=90
+percentage=70
 progress_bar
 
 payload="rsync -zav --rsh=\"ssh -p $ssh_port\" /var/log/srvcheck/ $ssh_user@$ssh_server:/var/log/srvcheck/$domain/\$HOSTNAME/"
 echo -e "\n$payload" >> /opt/srvcheck/srvcheck
+
+S="Configurazione srvcheck..."
+E="Scegliere modalita' di auto check (daily, weekly, monthly, none)"
+display_print
+
+message="Configurazione..."
+percentage=80
+progress_bar
+echo -e "\n\n"
+read auto_check
+
+S="Configurazione srvcheck..."
+E="Imposto $auto_check auto check..."
+display_print
+percentage=90
+progress_bar
+
+case $auto_check in
+daily)
+if [ $distro = alpine ]
+then
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/daily/srvcheck
+else
+    ln -s /opt/srvcheck/srvcheck /etc/cron.daily/srvcheck
+fi
+;;
+weekly)
+if [ $distro = alpine ]
+then
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/weekly/srvcheck
+else
+    ln -s /opt/srvcheck/srvcheck /etc/cron.weekly/srvcheck
+fi
+;;
+monthly)
+if [ $distro = alpine ]
+then
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/monthly/srvcheck
+else
+    ln -s /opt/srvcheck/srvcheck /etc/cron.monthly/srvcheck
+fi
+;;
+none)
+;;
+*)
+S="Configurazione srvcheck..."
+E="$auto_check valore non supportato"
+display_print
+;;
+esac
 
 S="Configurazione srvcheck..."
 E="# Finito!!! #"
