@@ -327,8 +327,6 @@ progress_bar
 
 payload="rsync -zav --rsh=\"ssh -p $ssh_port\" /var/log/srvcheck/ $ssh_user@$ssh_server:/var/log/srvcheck/$domain/\$HOSTNAME/"
 echo -e "\n$payload" >> /opt/srvcheck/srvcheck
-cat /opt/srvcheck/srvcheck |tail -n 1
-sleep 5s
 
 S="Configurazione srvcheck..."
 E="# Finito!!! #"
