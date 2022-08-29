@@ -15,3 +15,20 @@ Lo script deve poter funzionare sui seguenti OS:
 - Debian
 - Oracle Linux
 - Windows (script dedicato 'wincheck')
+
+## Stato attuale del progretto:
+
+Con l'ultimo commit le feature disponibili sono le seguenti:
+| Feature | Stato Programmazione |
+| - | - |
+|Controllo Orologio di sistema|OK|
+|Controllo spazio disco| OK |
+|Controllo spazio Volume Groups (LVM)| OK |
+|Controllo utilizzo CPU e RAM| OK |
+|Controllo aggiornamenti disponibili| OK |
+|Controllo di sicurezza con lynis| OK |
+|Sincronizzazione su server esterno (rsync o Telegram)| OK|
+|Supporto Oracle Linux|Non implementato|
+|Supporto fedora|Non implementato|
+|Supporto Arch linux|Non implementato|
+|Supporto Windows|Non implementato|
