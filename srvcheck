@@ -439,7 +439,7 @@ echo -e "# --- Suggerimenti:\n" | tee -a $F
 cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=//g' | tee -a $F
 
 # Send report to server! Change the log server name!
-rsync -zav /var/log/srvcheck/ myuser@my.server.com:3333/var/log/srvcheck/$HOSTNAME/
+#rsync -zav /var/log/srvcheck/ myuser@my.server.com:3333/var/log/srvcheck/$HOSTNAME/
 
 # Send report to Telegram account! Change the fields before run!
 #domain="Domain"
