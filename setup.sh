@@ -204,7 +204,7 @@ progress_bar
 
 if [ $missing -gt 0 ]
 then
-    case distro in
+    case $distro in
     alpine)
     apk update > /dev/null 2>&1
     percentage=70
