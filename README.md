@@ -28,7 +28,7 @@ Con l'ultimo commit le feature disponibili sono le seguenti:
 |Controllo aggiornamenti disponibili| OK |
 |Controllo di sicurezza con lynis| OK |
 |Sincronizzazione su server esterno (rsync o Telegram)| OK|
-|Supporto Oracle Linux|Non implementato|
-|Supporto fedora|Non implementato|
+|Supporto Oracle Linux|Testing|
+|Supporto fedora|Testing|
 |Supporto Arch linux|Non implementato|
 |Supporto Windows|Non implementato|
