@@ -78,7 +78,7 @@ fi
 F=/var/log/srvcheck/srvchk-$(date +%Y_%m_%d).txt
 
 # Set linux distro! (debian, arch, alpine, oracle)
-distro=$(cat /etc/os-release | grep '^ID.*' | sed s/ID=//)
+distro=$(cat /etc/os-release | grep '^ID=.*' | sed s/ID=//)
 
 if [[ $distro = 'alpine' ]]
 then

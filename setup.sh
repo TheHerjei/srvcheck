@@ -130,7 +130,7 @@ message="Controllo dipendenze"
 percentage=0
 progress_bar
 
-distro=$(cat /etc/os-release | grep '^ID.*' | sed s/ID=//)
+distro=$(cat /etc/os-release | grep '^ID=.*' | sed s/ID=//)
 missing=0
 if [ ! -e /usr/bin/top ]
 then
