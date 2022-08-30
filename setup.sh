@@ -206,18 +206,28 @@ if [ $missing -gt 0 ]
 then
     case distro in
     alpine)
-    apk update 2&1> /dev/null
-    message="Risolvo dipendenze"
+    apk update > /dev/null 2>&1
     percentage=70
     progress_bar
     apk add git restic rsync coreutils iputils curl top vim > /dev/null 2>&1
     ;;
     debian)
-    apt update 2&1> /dev/null
-    message="Risolvo dipendenze"
+    apt update > /dev/null 2>&1
     percentage=70
     progress_bar
     apt install restic git net-tools curl rsync top vim -y > /dev/null 2>&1
+    ;;
+    fedora)
+    dnf check-upgrade > /dev/null 2>&1
+    percentage=70
+    progress_bar
+    dnf install restic net-tools curl rsync vim -y > /dev/null 2>&1
+    ;;
+    ol)
+    dnf check-upgrade > /dev/null 2>&1
+    percentage=70
+    progress_bar
+    dnf install restic net-tools curl rsync vim -y > /dev/null 2>&1
     ;;
     *)
     E="# Distribuzione non supportata!"

@@ -1,14 +1,11 @@
 #!/bin/bash
 
 ## - TODO - ##
-# V Date Time control
-# V Storage space control
-# V CPU/RAM Consumption control
-# V Running services control
-# V Update control
-# V Backups control
-# V Security check
-# V Format data for reporting
+# V Add oracle support
+# V Add fedora support
+# Add arch support
+# LXC Control
+# Quemu vm control
 
 # Error leveling:
 # [OK] No errors
@@ -94,11 +91,18 @@ fi
 
 if [[ ! $missing -eq 0 ]]
 then
+    echo "# Hai fatto partire setup.sh?"
     exit 0
 fi
 
 # Initialize report file
-touch $F
+
+if [[ ! -e $F ]]
+then
+    touch $F
+else
+    echo "" > $F
+fi
 
 # Machine informations
 echo -e "##### - $F - #####\n" | tee -a $F
@@ -226,6 +230,12 @@ top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
 debian)
 top -bn 1 -o %MEM | head -n 12 | tail -n 6 | tee -a $F
 ;;
+fedora)
+top -bn 1 -o %MEM | head -n 12 | tail -n 6 | tee -a $F
+;;
+ol)
+top -bn 1 -o %MEM | head -n 12 | tail -n 6 | tee -a $F
+;;
 *)
 echo -e "# Distribuzione non supportata. [KO]\n" | tee -a $F
 ;;
@@ -238,6 +248,12 @@ alpine)
 C=$(top -n 1 | head -n 2 | tail -n 1 | awk '{ print $2 }' | sed 's/%//')
 ;;
 debian)
+C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
+;;
+fedora)
+C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
+;;
+ol)
 C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
 ;;
 *)
@@ -279,6 +295,12 @@ top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
 debian)
 top -bn 1 -o %CPU | head -n 12 | tail -n 6 | tee -a $F
 ;;
+fedora)
+top -bn 1 -o %CPU | head -n 12 | tail -n 6 | tee -a $F
+;;
+ol)
+top -bn 1 -o %CPU | head -n 12 | tail -n 6 | tee -a $F
+;;
 *)
 echo -e "# Distribuzione non supportata. [KO]\n" | tee -a $F
 ;;
@@ -318,6 +340,16 @@ else
     echo -e "Servizi in esecuzione normalmente [OK]"
 fi
 ;;
+ol)
+S=$(systemctl list-units --state=failed | grep -e '.*service$' | awk '{ print $2 }')
+if [[ ! ${#S} -eq 0 ]]
+then
+    echo -e "!!! Attenzione !!! Alcuni servizi risultano Stoppati [KO]" | tee -a $F
+    echo -e $S"\n" | tee -a $F
+else
+    echo -e "Servizi in esecuzione normalmente [OK]"
+fi
+;;
 *)
 echo -e "Distribuzione non supportata per questo controllo [KO]" | tee -a $F
 ;;
@@ -348,6 +380,28 @@ then
 else
     echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
     apk list -u| tee -a $F
+fi
+;;
+fedora)
+dnf check-upgrade
+U=$(dnf list --upgrade | wc -l)
+if [[ ${#U} -eq 1 ]]
+then
+    echo -e "# Nessun aggiornamento disponibile [OK]\n"
+else
+    echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
+    dnf list --upgrade| tee -a $F
+fi
+;;
+ol)
+dnf check-upgrade
+U=$(dnf list --upgrade | wc -l)
+if [[ ${#U} -eq 1 ]]
+then
+    echo -e "# Nessun aggiornamento disponibile [OK]\n"
+else
+    echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
+    dnf list --upgrade| tee -a $F
 fi
 ;;
 *)
@@ -425,6 +479,46 @@ then
     ;;
     esac
 fi
+
+# LXC and Qemu control
+qemu=0
+lxc=0
+if [ -e /usr/sbin/qm ]
+then
+    quemu=1
+fi
+if [ -e /usr/bin/lxc-ls ]
+then
+    lxc=1
+fi
+if [ $lxc -eq 1 || $qemu -eq 1 ]
+then
+    echo -e "\n## - CONTROLLO MACCHINE VIRTUALI - ##\n" | tee -a $F
+fi
+
+if [ $lxc -eq 1 ]
+then
+    for i in $(lxc-ls)
+    do
+        lxc_stopped=$(lxc-info $i | grep STOPPED | wc -L)
+        if [ $lxc_stopped -gt 0 ]
+        then
+            echo -e "# Attenzione, LXC $i spento! [KO]" | tee -a $F
+            lxc-info $i | tee -a $F
+        fi
+    done
+fi
+
+if [ $qemu -eq 1 ]
+then
+    qemu_stopped=$(qm list | grep stopped | wc -l)
+    if [ $qemu_stopped -gt 0 ]
+    then
+        echo -e "# Attenzione, VM spente! [KO]" | tee -a $F
+        qm list | grep stopped | tee -a $F
+    fi
+fi
+
 
 # Security auditing
 echo -e "\n## - CONTROLLO SICUREZZA - ##\n" | tee -a $F
