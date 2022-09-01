@@ -215,7 +215,7 @@ then
     apt update > /dev/null 2>&1
     percentage=70
     progress_bar
-    apt install restic git net-tools curl rsync top vim -y > /dev/null 2>&1
+    apt install restic git net-tools curl rsync vim -y > /dev/null 2>&1
     ;;
     fedora)
     dnf check-upgrade > /dev/null 2>&1
@@ -265,7 +265,7 @@ progress_bar
 
 if [ ! -e /usr/bin/srvcheck ]
 then
-    ln -s /opt/srvcheck /usr/bin/srvcheck > /dev/null 2>&1
+    ln -s /opt/srvcheck/srvcheck /usr/bin/srvcheck > /dev/null 2>&1
 fi
 
 S="Configurazione srvcheck..."
