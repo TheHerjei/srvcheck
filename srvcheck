@@ -272,21 +272,26 @@ else
 fi
 
 # STO004
-devices=( '/dev/sda' '/dev/sdb' '/dev/sdc' '/dev/sdd' '/dev/sde' '/dev/sdf' '/dev/sdg' '/dev/sdh' )
+if [ $vm -eq0 && $container -eq 0 ]
+then
+    devices=( '/dev/sda' '/dev/sdb' '/dev/sdc' '/dev/sdd' '/dev/sde' '/dev/sdf' '/dev/sdg' '/dev/sdh' )
 
-for i in "${devices[@]}"
-do
-    t=$(smartctl -a $i | grep "SMART overall-health self-assessment test result:.*" | sed 's/^.*: //')
-    if [[ $t == "PASSED" ]]
-    then
-    echo "STO004,0,$(date +%Y%m%d-%H%M%S),$i SMART $t" >> $F
-    elif [[ $t == "" ]]
-    then
-    echo "Device not found"
-    else
-    echo "STO004,1,$(date +%Y%m%d-%H%M%S),$i SMART $t" >> $F
-    fi
-done
+    for i in "${devices[@]}"
+    do
+        t=$(smartctl -a $i | grep "SMART overall-health self-assessment test result:.*" | sed 's/^.*: //')
+        if [[ $t == "PASSED" ]]
+        then
+        echo "STO004,0,$(date +%Y%m%d-%H%M%S),$i SMART $t" >> $F
+        elif [[ $t == "" ]]
+        then
+        echo "Device not found"
+        else
+        echo "STO004,1,$(date +%Y%m%d-%H%M%S),$i SMART $t" >> $F
+        fi
+    done
+else
+    echo "STO004,0,$(date +%Y%m%d-%H%M%S),VM/Container - Skipping" >> $F
+fi
 
 # STO005
 zfs=$(zpool status | grep -e 'DEGRADED|FAULTED' | awk '{ print $1 $2 }')
@@ -304,7 +309,7 @@ echo "MEM001,0,$(date +%Y%m%d-%H%M%S),System Total Memory: $(( t / 1000000 )) G"
 
 # MEM002
 f=$(free | grep -e 'Mem:.*' | awk '{ print $4 }')
-if [ $f -ls 2024000 ]
+if [ $f -lt 2024000 ]
 then
     echo "MEM002,1,$(date +%Y%m%d-%H%M%S),Low Free Memory: $(( f / 1000000 )) G" >> $F
 else
