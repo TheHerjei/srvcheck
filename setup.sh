@@ -1,397 +1,213 @@
 #!/bin/bash
 
-function display_print () {
-    local N=''
-    local R=''
+function check_dependencies {
 
-    local width=$W
-    local height=$H
-
-    local empty_line='\n'
-    local edge='-'
-
-    while [ $width -gt 2 ]
+    commands="top curl rsync netstat bash zip"
+    for i in $commands
     do
-        edge=$edge'='
-        let width--
-    done
-    edge=$edge'-'
-
-    local w=$(expr $W - ${#S})
-    w=$(expr $w / 2)
-    while [ $w -gt 2  ]
-    do
-        N=$N' '
-        let w--
+        which $i 2>/dev/null
+        if [ $? -eq 1 ]
+        then
+            echo "[!] Missing $i package"
+            missing="$missing $i"
+        fi
     done
 
-    w=$(expr $W - ${#N} - ${#S})
-    while [ $w -gt 2 ]
-    do
-        R=$R' '
-        let w--
-    done
-
-    clear -x
-    echo $edge
-    echo -en $empty_line
-    echo "|$N$S$R|"
-    if [ ${#E} -gt 0 ]
+    if [[ $distro == "alpine" ]]
     then
-        N=''
-        R=''
-        w=0
-        w=$(expr $W - ${#E})
-        w=$(expr $w / 2)
-        while [ $w -gt 2  ]
-        do
-            N=$N' '
-            let w--
-        done
-
-        w=$(expr $W - ${#N} - ${#E})
-        while [ $w -gt 2 ]
-        do
-            R=$R' '
-            let w--
-        done
-        echo "|$N$E$R|"
+        which coreutils 2>/dev/null
+        if [ $? -eq 1 ]
+        then
+            echo "[!] Missing coreutils package"
+            missing="$missing coreutils"
+        fi
     fi
-    echo -en $empty_line
-    echo -e $edge"\n"
+    echo "[#] Done"
 }
 
-function progress_bar {
-    local width=$(tput cols)
-    local riempi=$(( width - ${#message} - 20 ))
-    local spazi=''
-    
-    while [ $riempi -gt 1 ]
-    do
-        spazi=$spazi' '
-        let riempi--
-    done
+function install {
 
-    case $percentage in
-    0)
-    echo -en "# $message #$spazi ----------   0%\r"
+    case $distro in
+    alpine)
+    apk update
+    apk add $missing
     ;;
-    10)
-    echo -en "# $message #$spazi #---------  10%\r"
+    debian)
+    apt-get update
+    apt-get install $missing -Y
     ;;
-    20)
-    echo -en "# $message #$spazi ##--------  20%\r"
+    ol)
+    dnf install $missing -Y
     ;;
-    30)
-    echo -en "# $message #$spazi ###-------  30%\r"
-    ;;
-    40)
-    echo -en "# $message #$spazi ####------  40%\r"
-    ;;
-    50)
-    echo -en "# $message #$spazi #####-----  50%\r"
-    ;;
-    60)
-    echo -en "# $message #$spazi ######----  60%\r"
-    ;;
-    70)
-    echo -en "# $message #$spazi #######---  70%\r"
-    ;;
-    80)
-    echo -en "# $message #$spazi ########--  80%\r"
-    ;;
-    90)
-    echo -en "# $message #$spazi #########-  90%\r"
-    ;;
-    100)
-    echo -en "# $message #$spazi ########## 100%\r"
+    fedora)
+    dnf install $missing -Y
     ;;
     *)
-    echo -en "# $message #$spazi ########## 100%\r"
+    echo "[!] Distribution not supported yet. Please report!"
+    echo "[#] Following package to manually install:"
+    echo "[.] $missing"
     ;;
     esac
+
+    echo "[#] Done"
 }
 
-W=$(tput cols)
+function upg_lynis {
 
-S="Installazione srvcheck in corso..."
-display_print
+    if [ -e /opt/lynis ]
+    then
+        echo "[#] Lynis already exist. Upgrading."
+    else
+        echo "[#] Lynis first installation. Consider adding a default.prf"
+        mkdir /opt/lynis
+    fi
 
+    wget -O lynis.zip "https://github.com/CISOfy/lynis/archive/refs/heads/master.zip"
+    unzip lynis.zip
+    rsync -a lynis-master/ /opt/lynis/
+    rm -rf lynis.zip
+    rm -rf lynis-master
+
+    echo "[#] Done"
+
+}
+
+function upg_srvcheck {
+
+    if [ -e /opt/srvcheck ]
+    then
+        echo "[#] Srvcheck already exist. Upgrading."
+        srvcheck=1
+    else
+        echo "[#] Srvcheck first installation."
+        mkdir /opt/srvcheck
+    fi
+
+    wget -O srvcheck.zip "https://github.com/TheHerjei/srvcheck/archive/refs/heads/main.zip"
+    unzip srvcheck.zip
+    rsync -a srvcheck-main/ /opt/srvcheck/
+    rm -rf srvcheck.zip
+    rm -rf srvcheck-main
+    
+    echo "[#] Done"
+}
+
+function config {
+
+    echo "[#] Configuration."
+    echo "[.] Enter a domain name for $HOSTNAME"
+    read domain
+    echo "[.] Enter ssh server name or ip"
+    read ssh_server
+    echo "[.] Enter ssh server port"
+    read ssh_port
+    echo "[.] Enter ssh user account"
+    read ssh_user
+
+    ssh-keygen -A rsa -f /root/.ssh/id_rsa.pub
+    ssh_key=$(cat /root/.ssh/id_rsa.pub)
+    echo "[.] Enter password for $ssh_user @ $ssh_server"
+    ssh $ssh_user@$ssh_server -p $ssh_port "echo $ssh_key >> .ssh/authorized_keys"
+
+    echo "[#] Ssh keys exchange complete"
+    sed -i "s/CHANGEPORT/$ssh_port/" /opt/srvcheck/srvcheck
+    sed -i "s/CHANGEUSER/$ssh_user/" /opt/srvcheck/srvcheck
+    sed -i "s/CHANGESERVER/$ssh_server/" /opt/srvcheck/srvcheck
+    sed -i "s/CHANGEDOMAIN/$domain/" /opt/srvcheck/srvcheck
+
+    echo "[.] Choose srvcheck frequency"
+    echo "[.] daily weekly monthly"
+    read freq
+
+    case $freq in
+    daily)
+    if [[ $distro == alpine ]]
+    then
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq
+    else
+    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/$freq
+    fi
+    ;;
+    weekly)
+    if [[ $distro == alpine ]]
+    then
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq
+    else
+    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/$freq
+    fi
+    ;;
+    monthly)
+    if [[ $distro == alpine ]]
+    then
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq
+    else
+    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/$freq
+    fi
+    ;;
+    *)
+    echo "[!] Unrecognised option"
+    echo "[#] Auto choosing to weekly..."
+    if [[ $distro == alpine ]]
+    then
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq
+    else
+    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/$freq
+    fi
+    ;;
+    esac
+
+    echo "[#] Done"
+    
+}
+
+function help_menu {
+
+    echo -e "SRVCHECK - Server automated check tool...\n"
+    echo -e "setup.sh - Script to configure and upgrade srvcheck.\n"
+    echo -e "\tUse: setup.sh [OPTIONS]\n"
+    echo -e "OPTIONS:"
+    echo -e "\tWithout options start an interactive installation (Upgrade if already installed)\n"
+    echo -e "check\tCheck required dependencies and exit"
+    echo -e "dependencies\tInstall dependencies and exit"
+    echo -e "upgrade\tUpgrade srvcheck and lynis"
+    echo -e "help\tDisplay help and exit\n"
+
+}
+
+# Root permission check
 p=$(id | awk '{ print $1 }')
 if [ $p != "uid=0(root)" ]
 then
-    E=" Mancano privilegi di root! [KO]"
-    display_print
+    echo "[!] Critical, no root permission!"
+    echo "[#] exiting..."
     exit 0
 fi
 
-# Check dependencies
-message="Controllo dipendenze"
-percentage=0
-progress_bar
-
+# Variable initialization
+missing=""
+srvcheck=0
 distro=$(cat /etc/os-release | grep '^ID=.*' | sed s/ID=//)
-missing=0
-if [ ! -e /usr/bin/top ]
-then
-    E="# top [KO]"
-    display_print
-    let missing++
-fi
 
-if [ ! -e /usr/bin/curl ]
-then
-    E= "# curl [KO]"
-    display_print
-    let missing++
-fi
-
-if [ ! -e /usr/bin/rsync ]
-then
-    E="# rsync [KO]"
-    display_print
-    let missing++
-fi
-
-if [ ! -e /opt/lynis/lynis ]
-then
-    E="# lynis [KO]"
-    display_print
-    let missing++
-fi
-
-if [ ! -e /usr/bin/netstat ]
-then
-    if [ ! -e /bin/netstat ]
-    then
-        E="# netstat [KO]"
-        display_print
-        let missing++
-    fi
-fi
-
-message="Controllo dipendenze"
-percentage=20
-progress_bar
-
-if [ ! -e /usr/bin/restic ]
-then
-    E="# restic [KO]"
-    display_print
-    let missing++
-fi
-
-if [[ $distro = 'alpine' ]]
-then
-    if [ ! -e /usr/bin/coreutils ]
-    then
-        E="# coreutils [KO]"
-        display_print
-        let missing++
-    fi
-fi
-
-if [ ! -e /usr/bin/git ]
-then
-    E="# git [KO]"
-    display_print
-    let missing++
-fi
-
-message="Risolvo dipendenze"
-percentage=50
-progress_bar
-
-if [ $missing -gt 0 ]
-then
-    case $distro in
-    alpine)
-    apk update > /dev/null 2>&1
-    percentage=70
-    progress_bar
-    apk add git restic rsync coreutils iputils curl top vim > /dev/null 2>&1
-    ;;
-    debian)
-    apt update > /dev/null 2>&1
-    percentage=70
-    progress_bar
-    apt install restic git net-tools curl rsync vim -y > /dev/null 2>&1
-    ;;
-    fedora)
-    dnf check-upgrade > /dev/null 2>&1
-    percentage=70
-    progress_bar
-    dnf install restic net-tools curl rsync vim -y > /dev/null 2>&1
-    ;;
-    ol)
-    dnf check-upgrade > /dev/null 2>&1
-    percentage=70
-    progress_bar
-    dnf install restic net-tools curl rsync vim -y > /dev/null 2>&1
-    ;;
-    *)
-    E="# Distribuzione non supportata!"
-    display_print
-    ;;
-    esac
-    message="Risolvo dipendenze"
-    percentage=100
-    progress_bar
-fi
-
-message="Scarico Repositories"
-percentage=0
-progress_bar
-
-if [ ! -e /opt/lynis/lynis ]
-then
-    cd /opt
-    git clone https://github.com/CISOfy/lynis.git > /dev/null 2>&1
-fi
-
-message="Scarico Repositories"
-percentage=50
-progress_bar
-
-if [ ! -e /opt/srvcheck/srvcheck ]
-then
-    cd /opt
-    git clone https://github.com/theherjei/srvcheck.git > /dev/null 2>&1
-fi
-
-message="Scarico Repositories"
-percentage=100
-progress_bar
-
-if [ ! -e /usr/bin/srvcheck ]
-then
-    ln -s /opt/srvcheck/srvcheck /usr/bin/srvcheck > /dev/null 2>&1
-fi
-
-S="Configurazione srvcheck..."
-E="A quale dominio [tag] appartiene il server?"
-display_print
-
-message="Configurazione..."
-percentage=10
-progress_bar
-echo -e "\n\n"
-read domain
-
-S="Configurazione srvcheck..."
-E="Inserire utente del log server"
-display_print
-
-message="Configurazione..."
-percentage=20
-progress_bar
-echo -e "\n\n"
-read ssh_user
-
-S="Configurazione srvcheck..."
-E="Inserire indirizzo log server"
-display_print
-
-message="Configurazione..."
-percentage=30
-progress_bar
-echo -e "\n\n"
-read ssh_server
-
-S="Configurazione srvcheck..."
-E="Inserire porta ssh di $ssh_server"
-display_print
-
-message="Configurazione..."
-percentage=40
-progress_bar
-echo -e "\n\n"
-read ssh_port
-
-
-S="Configurazione srvcheck..."
-E="Scambio chiavi..."
-display_print
-
-message="Scambio chiavi SSH..."
-percentage=50
-progress_bar
-
-ssh-keygen -A rsa -f /root/.ssh/id_rsa.pub
-
-S="Configurazione srvcheck..."
-E="Scambio chiavi..."
-display_print
-percentage=60
-progress_bar
-
-ssh_key=$(cat /root/.ssh/id_rsa.pub)
-ssh $ssh_user@$ssh_server -p $ssh_port "echo $ssh_key >> .ssh/authorized_keys" > /dev/null 2>&1
-
-S="Configurazione srvcheck..."
-E="Aggiorno script srvchk..."
-display_print
-message="Concludo..."
-percentage=70
-progress_bar
-
-payload="rsync -zav --rsh=\"ssh -p $ssh_port\" /var/log/srvcheck/ $ssh_user@$ssh_server:/var/log/srvcheck/$domain/\$HOSTNAME/"
-echo -e "\n$payload" >> /opt/srvcheck/srvcheck
-
-S="Configurazione srvcheck..."
-E="Scegliere modalita' di auto check (daily, weekly, monthly, none)"
-display_print
-
-message="Configurazione..."
-percentage=80
-progress_bar
-echo -e "\n\n"
-read auto_check
-
-S="Configurazione srvcheck..."
-E="Imposto $auto_check auto check..."
-display_print
-percentage=90
-progress_bar
-
-case $auto_check in
-daily)
-if [ $distro = alpine ]
-then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/daily/srvcheck
-else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.daily/srvcheck
-fi
+case $1 in
+help)
+help_menu
 ;;
-weekly)
-if [ $distro = alpine ]
-then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/weekly/srvcheck
-else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.weekly/srvcheck
-fi
+check)
+check_dependencies
 ;;
-monthly)
-if [ $distro = alpine ]
-then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/monthly/srvcheck
-else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.monthly/srvcheck
-fi
+install)
+check_dependencies
+install
 ;;
-none)
+"")
+check_dependencies
+install
+upg_lynis
+upg_srvcheck
+config
 ;;
 *)
-S="Configurazione srvcheck..."
-E="$auto_check valore non supportato"
-display_print
+echo -e "[!] Not recognized option...\n"
+help_menu
 ;;
 esac
-
-S="Configurazione srvcheck..."
-E="# Finito!!! #"
-display_print
-message="Fatto!"
-percentage=100
-progress_bar
-echo -e "\n"

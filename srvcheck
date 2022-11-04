@@ -1,44 +1,38 @@
 #!/bin/bash
 
-# Error leveling:
-# [OK] No errors
-# [1] Warning, probable future malfunctioning
-# [2] Warning, probable ongoing malfunctioning
-# [3] Critical Warning, system failures are near!
-# [KO] Not functioning, stopped, broken
+# Set report file
+F=/var/log/srvcheck/srvchk-$(date +%Y_%m_%d).csv
 
-# Check root permission
+# SELF001
 p=$(id | awk '{ print $1 }')
 if [ $p != "uid=0(root)" ]
 then
-echo "# Eseguire con privilegi di root! [KO]"
+    self001="SELF001,2,$(date +%Y%m%d-%H%M%S),No root permission"
+    echo $self001
     exit 0
+else
+    self001="SELF001,0,$(date +%Y%m%d-%H%M%S),"
 fi
 
-# Check dependencies
+# SELF002
 missing=0
 if [ ! -e /usr/bin/top ]
 then
-    echo "# Installare il comando top [KO]"
     let missing++
 fi
 
 if [ ! -e /usr/bin/curl ]
 then
-    echo "# Installare il comando curl [KO]"
     let missing++
 fi
 
 if [ ! -e /usr/bin/rsync ]
 then
-    echo "# Installare il comando rsync [KO]"
     let missing++
 fi
 
 if [ ! -e /opt/lynis/lynis ]
 then
-    echo "# Installare lynis [KO]"
-    echo "git clone https://github.com/CISOfy/lynis.git"
     let missing++
 fi
 
@@ -46,314 +40,501 @@ if [ ! -e /usr/bin/netstat ]
 then
     if [ ! -e /bin/netstat ]
     then
-        echo "# Installare il comando netstat [KO]"
-        echo "apt install net-tools"
-        echo "apk add iputils"
-        let missing++
-    fi
-fi
-
-# Check report dir
-if [ ! -d /var/log/srvcheck ]
-then
-    mkdir /var/log/srvcheck
-fi
-
-# Set report file
-F=/var/log/srvcheck/srvchk-$(date +%Y_%m_%d).txt
-
-# Set linux distro! (debian, arch, alpine, oracle)
-distro=$(cat /etc/os-release | grep '^ID=.*' | sed s/ID=//)
-
-if [[ $distro = 'alpine' ]]
-then
-    if [ ! -e /usr/bin/coreutils ]
-    then
-        echo "# Installare il pacchetto coreutils [KO]"
         let missing++
     fi
 fi
 
 if [[ ! $missing -eq 0 ]]
 then
-    echo "# Hai fatto partire setup.sh?"
+    self002="SELF002,2,$(date +%Y%m%d-%H%M%S),Missing srvcheck dependencies"
+    echo $self002
     exit 0
+else
+    self002="SELF002,0,$(date +%Y%m%d-%H%M%S),"
 fi
 
-# Initialize report file
 
+# SELF003
+if [ ! -d /var/log/srvcheck ]
+then
+    self003="SELF003,1,$(date +%Y%m%d-%H%M%S),First run of srvcheck"
+    mkdir /var/log/srvcheck
+else
+    self003="SELF003,0,$(date +%Y%m%d-%H%M%S),"
+fi
+
+# SELF004
 if [[ ! -e $F ]]
 then
+    self004="SELF004,0,$(date +%Y%m%d-%H%M%S),"
     touch $F
 else
-    echo "" > $F
+    self004="SELF004,1,$(date +%Y%m%d-%H%M%S),Log file already exist, overwriting."
 fi
 
-# Machine informations
-echo -e "##### - $F - #####\n" | tee -a $F
-echo -e "## - INFORMAZIONI SULLA MACCHINA - ##\n" | tee -a $F
-echo "# - NOME MACCHINA: "$HOSTNAME | tee -a $F
-echo "# - VERSIONE KERNEL: "$(uname -s -r) | tee -a $F
-echo "# Ore di attivita': "$(uptime | awk '{ print $2 " " $3 " " $4 }') | tee -a $F
-echo "# Nome distribuzione rilevato: "$distro | tee -a $F
+echo "CheckID,ResultCode,Timestamp,Notes" > $F
+echo $self001 >> $F
+echo $self002 >> $F
+echo $self003 >> $F
+echo $self004 >> $F
 
-# Internet connection control
-echo -e "\n## - CONNESSIONE INTERNET - ##" | tee -a $F
-echo "# Rilevamento interfacce di rete..." | tee -a $F
-ipv4=$(ip a | grep -e 'inet\W' | sed '/.*lo$/d' | awk '{ print $2 }'| sed 's/\/[0-9][0-9]//')
-ipv6=$(ip a | grep -e 'inet\w' | sed '/.*::1\/128.*/d' | awk '{ print $2 }'| sed 's/\/[0-9][0-9]//')
+# SYS001
+distro=$(cat /etc/os-release | grep '^ID=.*' | sed s/ID=//)
+echo "SYS001,0,$(date +%Y%m%d-%H%M%S),Distro: $distro" >> $F
 
-echo -e "\n# Indirizzi ipv4" | tee -a $F
-echo $ipv4 | tee -a $F
-echo -e "\n# Indirizzi ipv6" | tee -a $F
-echo $ipv6 | tee -a $F
+# SYS002
+echo "SYS002,0,$(date +%Y%m%d-%H%M%S),Hostname: $HOSTNAME" >> $F
 
-ping -c 1 1.1.1.1
-if [[ ! $? -eq 0 ]]
+# SYS003
+echo "SYS003,0,$(date +%Y%m%d-%H%M%S),kernel: $(uname -r)" >> $F
+
+# SYS004
+u=$(uptime | awk '{ print $4 }')
+
+if [ $u == "days," ]
 then
-    echo -e "\n!!! Attenzione !!!! Connessione Internet assente! [KO]\n" | tee -a $F
+    echo "SYS004,0,$(date +%Y%m%d-%H%M%S),$(uptime | awk '{ print $3 " " $4 }')" >> $F
 else
-    echo "# Connessione Internet presente. [OK]"
+    echo "SYS004,1,$(date +%Y%m%d-%H%M%S),Running for less then 1 day: $(uptime | awk '{ print $3 }')" >> $F
 fi
 
-ping -c 1 google.it
-if [[ ! $? -eq 0 ]]
-then
-    echo -e "\n!!! Attenzione !!! DNS non risolve i nomi! [KO]\n" | tee -a $F
-else
-    echo "# Risoluzione DNS esterna a posto. [OK]"
-fi
-
-# Controllo connessioni attive
-# Connessioni in uscita
-echo -e "\n# Connessioni attive...\n" | tee -a $F
-netstat -anp | grep -e '.*ESTABLISHED.*' | tee -a $F
-
-# Processi in ascolto
-echo -e "\n# Connessioni in ascolto\n" | tee -a $F
-netstat -nlp | grep 'tcp.*LISTEN.*' | tee -a $F
-netstat -nlp | grep 'udp.*LISTEN.*' | tee -a $F
-
-# DateTime control
-echo -e "\n## - CONTROLLO OROLOGIO DI SISTEMA - ##\n" | tee -a $F
-
+# SYS005
 U=$(curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $5 " " $6 }')
 L=$(date -u +"%d %Y %T")
 if [[ $U != $L ]]
 then
-    echo -e "\n!!! Attenzione !!! Orologio di sistema non sincronizzato. [3]\n" | tee -a $F
-    curl -I -k google.it | grep "Date:" | awk '{ print $3 " " $4 " " $5 " " $6 " - Orario corretto"}' | tee -a $F;echo $(date -u +"%d %b %Y %T")" - Orario di sistema" | tee -a $F
+    echo "SYS005,2,$(date +%Y%m%d-%H%M%S),InternetTime: $U - SysTime: $L" >> $F
 else
-    echo "# Orario di sistema sincronizzato [OK]"
+    echo "SYS005,0,$(date +%Y%m%d-%H%M%S)," >> $F
 fi
 
-# Storage space control
-echo -e "\n## - SPAZIO SU DISCO - ##\n" | tee -a $F
-s=('.*/$' '.*/home$' '.*/tmp$' '.*boot$' '.*/share.*' '.*/bkp$' '.*/mnt.*')
+# SYS006
+vm=0
+container=0
+if [ -e /dev/mem ]
+then
+    m=$(dmidecode -s system-manufacturer)
 
-for i in "${s[@]}"
-do
-    d=$(df | grep -e $i | awk '{ print $5 }' | sed 's/%//')
-    if [[ ! ${#d} -eq 0 ]]
+    case $m in
+    QEMU)
+    vm=1
+    echo "SYS006,0,$(date +%Y%m%d-%H%M%S),Virtualized system (QEMU)" >> $F
+    ;;
+    "innotek GmbH")
+    vm=1
+    echo "SYS006,0,$(date +%Y%m%d-%H%M%S),Virtualized system (Virtualbox)" >> $F
+    ;;
+    *)
+    vm=0
+    echo "SYS006,0,$(date +%Y%m%d-%H%M%S),Physical installation" >> $F
+    ;;
+    esac
+else
+    container=1
+    echo "SYS006,0,$(date +%Y%m%d-%H%M%S),Containerized system" >> $F
+fi
+
+# SYS007
+if [ $container -eq 0 ]
+then
+    rootFs=$(df --output=target,fstype | grep -e '/\s.*' | awk '{ print $2 }')
+    echo "SYS007,0,$(date +%Y%m%d-%H%M%S),Root FS: $rootFs" >> $F
+else
+    echo "SYS007,0,$(date +%Y%m%d-%H%M%S),Container: $container - Skipping" >> $F
+fi
+
+# SYS008
+if [ $container -eq 0 ]
+then
+    if [ $vm -eq 0 ]
     then
-        echo -e "\nMount "$(df | grep -e $i | awk '{ print $6 }')" Spazio usato: "$d"%" | sed 's/[\.\*$]//g' | tee -a $F
-        case $d in
-        [1-4][0-9])
-        echo "# Spazio disco sufficiente [OK]"
+        t=$(sensors -u | grep -e "temp1_input:.*" | awk '{ print $2 }' | head -n 1)
+
+        case $t in
+        [6-7][0-9].*)
+        echo "SYS008,1,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
         ;;
-        [5-6][0-9])
-        echo "# Attenzione, spazio disco in esaurimento! [1]" | tee -a $F
-        ;;
-        [7-9][0-9])
-        echo "### ATTENZIONE! ### Spazio su disco ridotto! [3]" | tee -a $F
-        ;;
-        100)
-        echo "### Errore Critico! Spazio esaurito! [KO]" | tee -a $F
+        [8-9][0-9].*)
+        echo "SYS008,2,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
         ;;
         *)
-        echo "# Spazio su disco sufficiente [OK]"
+        echo "SYS008,0,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
         ;;
         esac
+    else
+        echo "SYS008,0,$(date +%Y%m%d-%H%M%S),VM: $vm - Skipping" >> $F
+    fi
+else
+    echo "SYS008,0,$(date +%Y%m%d-%H%M%S),Container: $container - Skipping" >> $F
+fi
+
+# SYS009
+# TODO
+
+# SYS010
+if [ $container -eq 0 ]
+then
+    if [ $vm -eq 0 ]
+    then
+        devices=( '/dev/sda' '/dev/sdb' '/dev/sdc' '/dev/sdd' '/dev/sde' '/dev/sdf' '/dev/sdg' '/dev/sdh' )
+        
+        for i in "${devices[@]}"
+        do
+            t=$(hddtemp $i 2>/dev/null | awk '{ print $NF }' | sed s/[°C]//g)
+
+            case $t in
+            [6-7][0-9])
+            echo "SYS010,1,$(date +%Y%m%d-%H%M%S),$i Temp: $t °C" >> $F
+            ;;
+            [8-9][0-9])
+            echo "SYS010,2,$(date +%Y%m%d-%H%M%S),$i Temp:  $t °C" >> $F
+            ;;
+            "")
+            echo "$i not found"
+            ;;
+            *)
+            echo "SYS010,0,$(date +%Y%m%d-%H%M%S),$i Temp:  $t °C" >> $F
+            ;;
+            esac
+        done
+    else
+        echo "SYS010,0,$(date +%Y%m%d-%H%M%S),VM: $vm - Skipping" >> $F
+    fi
+else
+    echo "SYS010,0,$(date +%Y%m%d-%H%M%S),Container: $container - Skipping" >> $F
+fi
+
+# STO001
+u=$(df --output=target,pcent | grep -e '/\s.*' | awk '{ print $2 }' | sed 's/%//')
+
+case $u in
+[5-6][0-9])
+echo "STO001,1,$(date +%Y%m%d-%H%M%S),High / Used: $u %" >> $F
+;;
+[7-9][0-9])
+echo "STO001,2,$(date +%Y%m%d-%H%M%S),Critical / Used: $u %" >> $F
+;;
+100)
+echo "STO001,2,$(date +%Y%m%d-%H%M%S),Critical / Used: $u %" >> $F
+;;
+*)
+echo "STO001,0,$(date +%Y%m%d-%H%M%S),/ Used: $u %" >> $F
+;;
+esac
+
+# STO002
+u=$(df --output=target,pcent | grep -e '/home\s.*' | awk '{ print $2 }' | sed 's/%//')
+
+case $u in
+[5-6][0-9])
+echo "STO002,1,$(date +%Y%m%d-%H%M%S),High /home Used: $u %" >> $F
+;;
+[7-9][0-9])
+echo "STO002,2,$(date +%Y%m%d-%H%M%S),Critical /home Used: $u %" >> $F
+;;
+100)
+echo "STO002,2,$(date +%Y%m%d-%H%M%S),Critical /home Used: $u %" >> $F
+;;
+"")
+echo "STO002,0,$(date +%Y%m%d-%H%M%S),No partition for /home" >> $F
+;;
+*)
+echo "STO002,0,$(date +%Y%m%d-%H%M%S),/home Used: $u %" >> $F
+;;
+esac
+
+# STO003
+n=$(vgs -o vg_name --units G --noheadings | sed 's/\s//g')
+
+for i in $n
+do
+    v=$(vgs -o vg_name,vg_free --units G --noheadings | grep $i | sed 's/\s|G//g' | awk '{ print $2 }')
+    case $v in
+    [0-9].*)
+    echo "STO003,2,$(date +%Y%m%d-%H%M%S),Critical free space: $i $v G" >> $F
+    ;;
+    *[0-1][0-9].*)
+    echo "STO003,1,$(date +%Y%m%d-%H%M%S),Low free space: $i $v G" >> $F
+    ;;
+    "")
+    echo "STO003,0,$(date +%Y%m%d-%H%M%S),No Volume Group" >> $F
+    ;;
+    *)
+    echo "STO003,0,$(date +%Y%m%d-%H%M%S),Volume free space: $i $v G" >> $F
+    ;;
+    esac
+done
+
+# STO004
+devices=( '/dev/sda' '/dev/sdb' '/dev/sdc' '/dev/sdd' '/dev/sde' '/dev/sdf' '/dev/sdg' '/dev/sdh' )
+
+for i in "${devices[@]}"
+do
+    t=$(smartctl -a $i | grep "SMART overall-health self-assessment test result:.*" | sed 's/^.*: //')
+    if [[ $t == "PASSED" ]]
+    then
+    echo "STO004,0,$(date +%Y%m%d-%H%M%S),$i SMART $t" >> $F
+    elif [[ $t == "" ]]
+    then
+    echo "Device not found"
+    else
+    echo "STO004,1,$(date +%Y%m%d-%H%M%S),$i SMART $t" >> $F
     fi
 done
 
-# Volume group control
-if [ -e /usr/sbin/vgdisplay ]
+# STO005
+zfs=$(zpool status | grep -e 'DEGRADED|FAULTED' | awk '{ print $1 $2 }')
+
+if [[ $zfs == "" ]]
 then
-    echo -e "\n## Utilizzo Volume groups" | tee -a $F
-    vgdisplay | grep -e 'VG Name.*\|Free.*' | tee -a $F
+    echo "STO005,0,$(date +%Y%m%d-%H%M%S)," >> $F
+else
+    echo "STO005,2,$(date +%Y%m%d-%H%M%S),$zfs" >> $F
 fi
 
-echo -e "\n## - UTILIZZO RISORSE - ##\n" | tee -a $F
+# MEM001
+t=$(free | grep -e 'Mem:.*' | awk '{ print $2 }')
+echo "MEM001,0,$(date +%Y%m%d-%H%M%S),System Total Memory: $(( t / 1000000 )) G" >> $F
 
-# Memory usage
-T=$(free | grep 'Mem.*' | awk '{ print $2}')
-U=$(free | grep 'Mem.*' | awk '{ print $3}')
-P=$(( U *100 / T ))
+# MEM002
+f=$(free | grep -e 'Mem:.*' | awk '{ print $4 }')
+if [ $f -ls 2024000 ]
+then
+    echo "MEM002,2,$(date +%Y%m%d-%H%M%S),Critical Free Memory: $(( f / 1000000 )) G" >> $F
+else
+    echo "MEM002,0,$(date +%Y%m%d-%H%M%S),System Free Memory: $(( f / 1000000 )) G" >> $F
+fi
 
-echo "# Utilizzo memoria RAM "$P"%" | tee -a $F
+# MEM003
+u=$(free | grep -e 'Mem:.*' | awk '{ print $3 }')
+let "p = 100 * $u / $t"
 
-case $P in
-[5-6][0-9])
-echo "# Non Critico, elevato utilizzo memoria RAM! [1]" | tee -a $F
-;;
-[7-8][0-9])
-echo "# Attenzione, Elevato utilizzo memoria RAM! [2]" | tee -a $F
-;;
-9[0-9])
-echo "!!! Attenzione !!! Utilizzo RAM Critico! [3]" | tee -a $F
-;;
-*)
-echo "# Livelli utilizzo RAM nella norma. [OK]"
-;;
-esac
-
-case $distro in
-alpine)
-top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
-;;
-debian)
-top -bn 1 -o %MEM | head -n 12 | tail -n 6 | tee -a $F
-;;
-fedora)
-top -bn 1 -o %MEM | head -n 12 | tail -n 6 | tee -a $F
-;;
-ol)
-top -bn 1 -o %MEM | head -n 12 | tail -n 6 | tee -a $F
-;;
-*)
-echo -e "# Distribuzione non supportata. [KO]\n" | tee -a $F
-;;
-esac
-
-# CPU usage
-C=0
-case $distro in
-alpine)
-C=$(top -n 1 | head -n 2 | tail -n 1 | awk '{ print $2 }' | sed 's/%//')
-;;
-debian)
-C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
-;;
-fedora)
-C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
-;;
-ol)
-C=$(top -n 1 | grep '%Cpu.*' | awk '{ print $2 }')
-;;
-*)
-echo -e "# Distribuzione non supportata. [KO]\n" | tee -a $F
-;;
-esac
-
-echo "# Utilizzo CPU: "$C"%" | tee -a $F
-
-case $C in
+case $p in
 [5-7][0-9])
-echo "# Attenzione, utilizzo CPU oltre la media [1]" | tee -a $F
+echo "MEM003,1,$(date +%Y%m%d-%H%M%S),High Mem Used: $p %" >> $F
 ;;
 [8-9][0-9])
-echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
-top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
+echo "MEM003,2,$(date +%Y%m%d-%H%M%S),Critical Mem Used: $p %" >> $F
+;;
+*)
+echo "MEM003,0,$(date +%Y%m%d-%H%M%S),Mem Used: $p %" >> $F
+;;
+esac
+
+# MEM004
+p=$(top -bn 1 -o +%MEM | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $10 "%" " " $12 }')
+echo "MEM004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
+
+# CPU001
+#TODO
+
+# CPU002
+#TODO
+
+# CPU003
+if [ $distro == "alpine" ]
+then
+    c=$(top -bn 1 | grep -e '^CPU.*' | awk '{ print $2 }' | sed 's/%//')
+else
+    c=$(top -bn 1 | grep -e '^%Cpu.*' | awk '{ print $2 }')
+fi
+
+case $c in
+[5-7][0-9][,][0-9])
+echo "CPU003,1,$(date +%Y%m%d-%H%M%S),High Cpu Used: $c %" >> $F
+;;
+[8-9][0-9][,][0-9])
+echo "CPU003,2,$(date +%Y%m%d-%H%M%S),Critical Cpu Used: $c %" >> $F
+;;
+*)
+echo "CPU003,0,$(date +%Y%m%d-%H%M%S),Cpu Used: $c %" >> $F
+;;
+esac
+
+# CPU004
+p=$(top -bn 1 -o +%CPU | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $9 "%" " " $12 }')
+echo "CPU004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
+
+# SVC001
+# TODO
+
+# SVC002
+case $distro in
+alpine)
+s=$(rc-status | grep -e '.*stopped.*' | awk '{ print $1 }')
+;;
+*)
+s=$(systemctl list-units --state=failed | grep -e '.*service$' | awk '{ print $2 }')
+;;
+esac
+
+if [[ $s == "" ]]
+then
+    echo "SVC002,0,$(date +%Y%m%d-%H%M%S)," >> $F
+else
+    echo "SVC002,2,$(date +%Y%m%d-%H%M%S),Failed/Stopped: $s" >> $F
+fi
+
+if [[ $container -eq 0 && $vm -eq 0 ]]
+then
+    # VME001
+    qemu=0
+    if [ -e /usr/sbin/qm ]
+    then
+        qemu=1
+        echo "VME001,0,$(date +%Y%m%d-%H%M%S),QEMU/KVM: $qemu" >> $F
+    else
+        echo "VME001,0,$(date +%Y%m%d-%H%M%S),QEMU/KVM: $qemu" >> $F
+    fi
+
+    # VME002
+    lxc=0
+    if [ -e /usr/bin/lxc-ls ]
+    then
+        lxc=1
+        echo "VME002,0,$(date +%Y%m%d-%H%M%S),LXC: $lxc" >> $F
+    else
+        echo "VME002,0,$(date +%Y%m%d-%H%M%S),LXC: $lxc" >> $F
+    fi
+
+    # VME003
+    # TODO
+
+else
+    echo "VME001,0,$(date +%Y%m%d-%H%M%S),Containerized/Virtualized system: Skipping" >> $F
+    echo "VME002,0,$(date +%Y%m%d-%H%M%S),Containerized/Virtualized system: Skipping" >> $F
+    echo "VME003,0,$(date +%Y%m%d-%H%M%S),Containerized/Virtualized system: Skipping" >> $F
+    echo "VME004,0,$(date +%Y%m%d-%H%M%S),Containerized/Virtualized system: Skipping" >> $F
+    echo "VME005,0,$(date +%Y%m%d-%H%M%S),Containerized/Virtualized system: Skipping" >> $F
+fi
+
+# VME004
+if [ $qemu -eq 1 ]
+then
+    qemu_stopped=$(qm list | grep stopped)
+    if [[ $qemu_stopped == "" ]]
+    then
+        echo "VME004,0,$(date +%Y%m%d-%H%M%S)," >> $F
+    else
+        echo "VME004,2,$(date +%Y%m%d-%H%M%S),VM Stopped: $qemu_stopped" >> $F
+    fi
+fi
+
+# VME005
+if [ $lxc -eq 1 ]
+then
+    lxc_stopped=$(lxc-ls --stopped)
+    if [[ $lxc_stopped == "" ]]
+    then
+        echo "VME005,0,$(date +%Y%m%d-%H%M%S)," >> $F
+    else
+        echo "VME005,2,$(date +%Y%m%d-%H%M%S),LXC Stopped: $lxc_stopped" >> $F
+    fi
+fi
+
+# BKP001
+restic=0
+
+if [[ -e /usr/bin/restic && -e /var/log/restic.log ]]
+then
+    restic=1
+    echo "BKP001,0,$(date +%Y%m%d-%H%M%S),Restic backup used" >> $F
+else
+    echo "BKP001,1,$(date +%Y%m%d-%H%M%S),Restic backup not find" >> $F
+fi
+
+# BKP002
+u=$(df --output=target,pcent | grep -e '/mnt/bkp.*' | awk '{ print $2 }' | sed 's/%//')
+
+case $u in
+[5-6][0-9])
+echo "BKP002,1,$(date +%Y%m%d-%H%M%S),High /mnt/bkp Used: $u %" >> $F
+;;
+[7-9][0-9])
+echo "BKP002,2,$(date +%Y%m%d-%H%M%S),Critical /mnt/bkp Used: $u %" >> $F
 ;;
 100)
-echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
-top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
+echo "BKP002,2,$(date +%Y%m%d-%H%M%S),Critical /mnt/bkp Used: $u %" >> $F
 ;;
-[5-7][0-9],[0-9])
-echo "# Attenzione, utilizzo CPU oltre la media [1]" | tee -a $F
-top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
-;;
-[8-9][0-9],[0-9])
-echo "!!! Attenzione !!! Livelli CPU Critici [3]" | tee -a $F
-top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
+"")
+echo "BKP002,1,$(date +%Y%m%d-%H%M%S),No partition for /mnt/bkp" >> $F
 ;;
 *)
-echo "# Livelli utilizzo CPU normali [OK]"
+echo "BKP002,0,$(date +%Y%m%d-%H%M%S),/mnt/bkp Used: $u %" >> $F
 ;;
 esac
 
-case $distro in
-alpine)
-top -bn 1 | head -n 9 | tail -n 6 | tee -a $F
-;;
-debian)
-top -bn 1 -o %CPU | head -n 12 | tail -n 6 | tee -a $F
-;;
-fedora)
-top -bn 1 -o %CPU | head -n 12 | tail -n 6 | tee -a $F
-;;
-ol)
-top -bn 1 -o %CPU | head -n 12 | tail -n 6 | tee -a $F
-;;
-*)
-echo -e "# Distribuzione non supportata. [KO]\n" | tee -a $F
-;;
-esac
+# BKP003
+if [ $restic -eq 1 ]
+then
+    T=$(cat /var/log/restic.log | tail -n 3 | head -n 1 | awk '{ print $2 }')
+    if [[ ! $T = $(date +%Y-%m-%d) ]]
+    then
+        echo "BKP003,1,$(date +%Y%m%d-%H%M%S),Last Restic snapshot date: $T" >> $F
+    else
+        echo "BKP003,0,$(date +%Y%m%d-%H%M%S),Last Restic snapshot date: $T" >> $F
+    fi
+    
+    # BKP004
+    B=$(cat /var/log/restic.log | grep -e '.*snapshots$' | tail -n 1 | awk '{ print $1 }')
+    
+    case $B in
+    [0-5])
+    echo "BKP004,1,$(date +%Y%m%d-%H%M%S),Restic snapshots count: $B" >> $F
+    ;;
+    [0-2][0-9])
+    echo "BKP004,0,$(date +%Y%m%d-%H%M%S),Restic snapshots count: $B" >> $F
+    ;;
+    *)
+    echo "BKP004,1,$(date +%Y%m%d-%H%M%S),Restic snapshots count: $B" >> $F
+    ;;
+    esac
+else
+    echo "BKP003,0,$(date +%Y%m%d-%H%M%S),No Restic: Skipping" >> $F
+    echo "BKP004,0,$(date +%Y%m%d-%H%M%S),No Restic: Skipping" >> $F
+fi
 
-# Running service control
-echo -e "\n## - CONTROLLO SERVIZI - ##\n" | tee -a $F
+# BKP005
+# TODO
 
-case $distro in
-alpine)
-S=$(rc-status | grep -e '.*stopped.*' | awk '{ print $1 }')
-if [[ ! ${#S} -eq 0 ]]
+# NET001
+ping -c 2 8.8.8.8
+if [[ ! $? -eq 0 ]]
 then
-    echo -e "!!! Attenzione !!! Alcuni servizi risultano Stoppati [KO]" | tee -a $F
-    echo -e $S"\n" | tee -a $F
+    echo "NET001,2,$(date +%Y%m%d-%H%M%S),No Internet Connection" >> $F
 else
-    echo -e "Servizi in esecuzione normalmente [OK]"
+    echo "NET001,0,$(date +%Y%m%d-%H%M%S)," >> $F
 fi
-;;
-debian)
-S=$(systemctl list-units --state=failed | grep -e '.*service$' | awk '{ print $2 }')
-if [[ ! ${#S} -eq 0 ]]
-then
-    echo -e "!!! Attenzione !!! Alcuni servizi risultano Stoppati [KO]" | tee -a $F
-    echo -e $S"\n" | tee -a $F
-else
-    echo -e "Servizi in esecuzione normalmente [OK]"
-fi
-;;
-fedora)
-S=$(systemctl list-units --state=failed | grep -e '.*service$' | awk '{ print $2 }')
-if [[ ! ${#S} -eq 0 ]]
-then
-    echo -e "!!! Attenzione !!! Alcuni servizi risultano Stoppati [KO]" | tee -a $F
-    echo -e $S"\n" | tee -a $F
-else
-    echo -e "Servizi in esecuzione normalmente [OK]"
-fi
-;;
-ol)
-S=$(systemctl list-units --state=failed | grep -e '.*service$' | awk '{ print $2 }')
-if [[ ! ${#S} -eq 0 ]]
-then
-    echo -e "!!! Attenzione !!! Alcuni servizi risultano Stoppati [KO]" | tee -a $F
-    echo -e $S"\n" | tee -a $F
-else
-    echo -e "Servizi in esecuzione normalmente [OK]"
-fi
-;;
-*)
-echo -e "Distribuzione non supportata per questo controllo [KO]" | tee -a $F
-;;
-esac
 
-# Update control
-echo -e "\n## - CONTROLLO AGGIORNAMENTI - ##\n" | tee -a $F
+# NET002
+ping -c 2 google.it
+if [[ ! $? -eq 0 ]]
+then
+    echo "NET002,2,$(date +%Y%m%d-%H%M%S),DNS Resolution failed" >> $F
+else
+    echo "NET002,0,$(date +%Y%m%d-%H%M%S)," >> $F
+fi
+
+# NET003
+# TODO
+# netstat -anp | grep -e '.*ESTABLISHED.*' | tee -a $F
+
+# NET004
+# TODO
+# netstat -nlp | grep 'tcp.*LISTEN.*' | tee -a $F
+# netstat -nlp | grep 'udp.*LISTEN.*' | tee -a $F
+
+# UPG001
 U=0
-
 case $distro in
 debian)
 apt-get update
 U=$(apt list --upgradeable)
 if [[ ${#U} -eq 0 ]]
 then
-    echo -e "# Nessun aggiornamento disponibile [OK]\n"
+    echo "UPG001,0,$(date +%Y%m%d-%H%M%S)," >> $F
 else
-    echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
-    apt list --upgradeable | tee -a $F
+    echo "UPG001,1,$(date +%Y%m%d-%H%M%S),Updates available" >> $F
 fi
 ;;
 alpine)
@@ -361,161 +542,91 @@ apk update
 U=$(apk list -u)
 if [[ ${#U} -eq 0 ]]
 then
-    echo -e "# Nessun aggiornamento disponibile [OK]\n"
+    echo "UPG001,0,$(date +%Y%m%d-%H%M%S)," >> $F
 else
-    echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
-    apk list -u| tee -a $F
+    echo "UPG001,1,$(date +%Y%m%d-%H%M%S),Updates available" >> $F
 fi
 ;;
 fedora)
 dnf check-upgrade
 U=$(dnf list --upgrade | wc -l)
-if [[ ${#U} -eq 1 ]]
+if [[ ${#U} -eq 0 ]]
 then
-    echo -e "# Nessun aggiornamento disponibile [OK]\n"
+    echo "UPG001,0,$(date +%Y%m%d-%H%M%S)," >> $F
 else
-    echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
-    dnf list --upgrade| tee -a $F
+    echo "UPG001,1,$(date +%Y%m%d-%H%M%S),Updates available" >> $F
 fi
 ;;
 ol)
 dnf check-upgrade
 U=$(dnf list --upgrade | wc -l)
-if [[ ${#U} -eq 1 ]]
+if [[ ${#U} -eq 0 ]]
 then
-    echo -e "# Nessun aggiornamento disponibile [OK]\n"
+    echo "UPG001,0,$(date +%Y%m%d-%H%M%S)," >> $F
 else
-    echo -e "# Aggiornamenti disponibili: [1]\n" | tee -a $F
-    dnf list --upgrade| tee -a $F
+    echo "UPG001,1,$(date +%Y%m%d-%H%M%S),Updates available" >> $F
 fi
 ;;
 *)
-echo "# Controllo aggiornamenti non disponibile per questa distribuzione..." | tee -a $F
+echo "UPG001,2,$(date +%Y%m%d-%H%M%S),Distro not compatible with function" >> $F
 ;;
 esac
 
-# Backups control
-echo -e "\n## - CONTROLLO BACKUPS - ##\n" | tee -a $F
+# SEC001
+lynis=0
+if [ -e /opt/lynis/lynis ]
+then
+    lynis=1
+    echo "SEC001,0,$(date +%Y%m%d-%H%M%S)," >> $F
+else
+    echo "SEC001,2,$(date +%Y%m%d-%H%M%S),No lynis binaries" >> $F
+fi
 
-echo -e "# Restic Backups...\n" | tee -a $F
-if [ -f /var/log/restic.log ]
-then 
-    B=$(cat /var/log/restic.log | grep -e '.*snapshots$' | tail -n 1 | awk '{ print $1 }')
-    T=$(cat /var/log/restic.log | tail -n 3 | head -n 1 | awk '{ print $2 }')
-    if [[ ! $T = $(date +%Y-%m-%d) ]]
+# SEC002
+if [ $lynis -eq 1 ]
+then
+    cd /opt/lynis/
+    sh lynis audit system > /dev/null
+    echo "SEC002,0,$(date +%Y%m%d-%H%M%S),Lynis audit done" >> $F
+else
+    echo "SEC002,2,$(date +%Y%m%d-%H%M%S),No lynis: Skipping" >> $F
+fi
+
+# SEC003
+if [ $lynis -eq 1 ]
+then
+    w=$(cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=\|[,]//g')
+    if [[ $w == "" ]]
     then
-        echo -e "!!! Attenzione !!! Ultimo backup non e' del giorno corrente [1]\n" | tee -a $F
-        if [[ $T = $(date -d 'yesterday' +%Y-%m-%d) ]]
-        then
-            echo -e "!!! Attenzione !!! Ultimo backup datato a ieri [1]\n" | tee -a $F
-        else
-            echo -e "!!! Attenzione !!! Ultimo backup datato $T [3]\n" | tee -a $F
-        fi
+    echo "SEC003,0,$(date +%Y%m%d-%H%M%S),No Warnings" >> $F
+    else
+    echo "SEC003,1,$(date +%Y%m%d-%H%M%S),Warnings: $w" >> $F
     fi
 else
-    B=0
-    echo -e "\n!!! Attenzione !!! Non e' presente il file log di backup [KO]\n" | tee -a $F
+    echo "SEC003,2,$(date +%Y%m%d-%H%M%S),No lynis: Skipping" >> $F
 fi
 
-case $B in
-0)
-echo -e "!!! Attenzione !!! non sono presenti snapshots! [3]\n" | tee -a $F
-;;
-[1-9])
-echo -e "# Attenzione, presenti solo $B snapshots! [2]" | tee -a $F
-;;
-[1-4][0-9])
-echo -e "# Conteggio snapshots nella norma $B. [OK]"
-;;
-[5-9][0-9])
-echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -a $F
-;;
-*)
-echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -a $F
-;;
-esac
-
-if [ -f /var/log/restic.log ]
+# SEC004
+if [ $lynis -eq 1 ]
 then
-    echo -e "## - RESTIC LOG - ##\n" | tee -a $F
-    cat /var/log/restic.log | tee -a $F
-fi
-
-if [ -d /var/lib/vz/dump ]
-then
-    B=$(ls /var/lib/vz/dump | grep -e '.*zst$' | wc -l)
-    echo -e "# Rilevati " $B "backups Proxmox\n" |tee -a $F
-    ls /var/lib/vz/dump | grep -e '.*zst$'
-    case $B in
-    0)
-    echo -e "!!! Attenzione !!! non sono presenti backups! [3]\n" | tee -a $F
-    ;;
-    [1-9])
-    echo -e "# Attenzione, presenti solo $B backups! [2]" | tee -a $F
-    ;;
-    [1-4][0-9])
-    echo -e "# Conteggio backups nella norma $B. [OK]"
-    ;;
-    [5-9][0-9])
-    echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -a $F
-    ;;
-    *)
-    echo -e "# Attenzione! Conteggio snapshots superiore alla norma $B. [1]" | tee -a $F
-    ;;
-    esac
-fi
-
-# LXC and Qemu control
-qemu=0
-lxc=0
-if [ -e /usr/sbin/qm ]
-then
-    quemu=1
-fi
-if [ -e /usr/bin/lxc-ls ]
-then
-    lxc=1
-fi
-if [ $lxc -eq 1 || $qemu -eq 1 ]
-then
-    echo -e "\n## - CONTROLLO MACCHINE VIRTUALI - ##\n" | tee -a $F
-fi
-
-if [ $lxc -eq 1 ]
-then
-    for i in $(lxc-ls)
-    do
-        lxc_stopped=$(lxc-info $i | grep STOPPED | wc -L)
-        if [ $lxc_stopped -gt 0 ]
-        then
-            echo -e "# Attenzione, LXC $i spento! [KO]" | tee -a $F
-            lxc-info $i | tee -a $F
-        fi
-    done
-fi
-
-if [ $qemu -eq 1 ]
-then
-    qemu_stopped=$(qm list | grep stopped | wc -l)
-    if [ $qemu_stopped -gt 0 ]
+    w=$(echo $w | sed 's/|.*//g')
+    s=$(cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=\|[,]//g' | grep $w)
+    if [[ $s == "" ]]
     then
-        echo -e "# Attenzione, VM spente! [KO]" | tee -a $F
-        qm list | grep stopped | tee -a $F
+    echo "SEC004,0,$(date +%Y%m%d-%H%M%S),No Suggestions" >> $F
+    else
+    echo "SEC004,1,$(date +%Y%m%d-%H%M%S),Suggestions: $s" >> $F
     fi
+else
+    echo "SEC004,2,$(date +%Y%m%d-%H%M%S),No lynis: Skipping" >> $F
 fi
 
+# SYN001
+rsync -zav --rsh="ssh -p CHANGEPORT" /var/log/srvcheck/ CHANGEUSER@CHANGESERVER:/var/log/srvcheck/CHANGEDOMAIN/$HOSTNAME/
 
-# Security auditing
-echo -e "\n## - CONTROLLO SICUREZZA - ##\n" | tee -a $F
-
-cd /opt/lynis/
-echo "Controllo di sicurezza in corso..."
-sh lynis audit system > /dev/null
-echo -e "# --- Attenzione:\n" | tee -a $F
-cat /var/log/lynis-report.dat | grep warning | sed -e 's/warning\[\]\=//g' | tee -a $F
-
-echo -e "# --- Suggerimenti:\n" | tee -a $F
-cat /var/log/lynis-report.dat | grep suggestion | sed -e 's/suggestion\[\]\=//g' | tee -a $F
-
-echo -e "\n\nPer leggere subito il log digitare:\n"
-echo "less $F"
+if [[ ! $? -eq 0 ]]
+then
+    echo "SYN001,2,$(date +%Y%m%d-%H%M%S),Log Sync Failed" >> $F
+else
+    echo "SYN001,0,$(date +%Y%m%d-%H%M%S)," >> $F
+fi
