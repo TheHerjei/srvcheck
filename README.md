@@ -4,6 +4,19 @@
 A Script to run on servers or Workstations to automatically run checks system wide.
 The script outputs in cvs format to be easily readable and processed or filtered as needed.
 
+## Installation
+
+run on terminal as root user:
+`wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh"`
+
+then run:
+`chmod +x setup.sh`
+
+lastly:
+`./setup.sh`
+
+and follow onscreen instructions.
+
 ## Output scheme:
 
 *New Output report scheme:*
