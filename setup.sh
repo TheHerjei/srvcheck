@@ -27,27 +27,32 @@ function check_dependencies {
 
 function install {
 
-    case $distro in
-    alpine)
-    apk update
-    apk add $missing
-    ;;
-    debian)
-    apt-get update
-    apt-get install $missing -Y
-    ;;
-    ol)
-    dnf install $missing -Y
-    ;;
-    fedora)
-    dnf install $missing -Y
-    ;;
-    *)
-    echo "[!] Distribution not supported yet. Please report!"
-    echo "[#] Following package to manually install:"
-    echo "[.] $missing"
-    ;;
-    esac
+    if [[ ! $missing == "" ]]
+    then
+        case $distro in
+        alpine)
+        apk update
+        apk add $missing
+        ;;
+        debian)
+        apt-get update
+        apt-get install $missing -Y
+        ;;
+        ol)
+        dnf install $missing -Y
+        ;;
+        fedora)
+        dnf install $missing -Y
+        ;;
+        *)
+        echo "[!] Distribution not supported yet. Please report!"
+        echo "[#] Following package to manually install:"
+        echo "[.] $missing"
+        ;;
+        esac
+    else
+        echo "[#] No dependencies need to be installed"
+    fi
 
     echo "[#] Done"
 }
