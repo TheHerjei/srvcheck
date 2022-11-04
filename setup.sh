@@ -2,7 +2,7 @@
 
 function check_dependencies {
 
-    commands="top curl rsync netstat bash zip"
+    commands="top curl rsync netstat bash zip dmidecode hddtemp"
     for i in $commands
     do
         which $i 2>/dev/null
@@ -128,25 +128,25 @@ function config {
     daily)
     if [[ $distro == alpine ]]
     then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/srvcheck
     else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/$freq
+    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
     fi
     ;;
     weekly)
     if [[ $distro == alpine ]]
     then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/srvcheck
     else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/$freq
+    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
     fi
     ;;
     monthly)
     if [[ $distro == alpine ]]
     then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/srvcheck
     else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/$freq
+    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
     fi
     ;;
     *)
@@ -154,9 +154,9 @@ function config {
     echo "[#] Auto choosing to weekly..."
     if [[ $distro == alpine ]]
     then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/srvcheck
     else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/$freq
+    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
     fi
     ;;
     esac

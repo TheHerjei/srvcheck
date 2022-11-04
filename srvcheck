@@ -244,26 +244,32 @@ echo "STO002,0,$(date +%Y%m%d-%H%M%S),/home Used: $u %" >> $F
 esac
 
 # STO003
-n=$(vgs -o vg_name --units G --noheadings | sed 's/\s//g')
+which vgs
+if [ $? -eq 0 ]
+then
+    n=$(vgs -o vg_name --units G --noheadings | sed 's/\s//g')
 
-for i in $n
-do
-    v=$(vgs -o vg_name,vg_free --units G --noheadings | grep $i | sed 's/\s|G//g' | awk '{ print $2 }')
-    case $v in
-    [0-9].*)
-    echo "STO003,2,$(date +%Y%m%d-%H%M%S),Critical free space: $i $v G" >> $F
-    ;;
-    *[0-1][0-9].*)
-    echo "STO003,1,$(date +%Y%m%d-%H%M%S),Low free space: $i $v G" >> $F
-    ;;
-    "")
-    echo "STO003,0,$(date +%Y%m%d-%H%M%S),No Volume Group" >> $F
-    ;;
-    *)
-    echo "STO003,0,$(date +%Y%m%d-%H%M%S),Volume free space: $i $v G" >> $F
-    ;;
-    esac
-done
+    for i in $n
+    do
+        v=$(vgs -o vg_name,vg_free --units G --noheadings | grep $i | sed 's/\s|G//g' | awk '{ print $2 }')
+        case $v in
+        [0-9].*)
+        echo "STO003,2,$(date +%Y%m%d-%H%M%S),Critical free space: $i $v G" >> $F
+        ;;
+        *[0-1][0-9].*)
+        echo "STO003,1,$(date +%Y%m%d-%H%M%S),Low free space: $i $v G" >> $F
+        ;;
+        "")
+        echo "STO003,0,$(date +%Y%m%d-%H%M%S),No Volume Group" >> $F
+        ;;
+        *)
+        echo "STO003,0,$(date +%Y%m%d-%H%M%S),Volume free space: $i $v G" >> $F
+        ;;
+        esac
+    done
+else
+    echo "STO003,0,$(date +%Y%m%d-%H%M%S),No LVM" >> $F
+fi
 
 # STO004
 devices=( '/dev/sda' '/dev/sdb' '/dev/sdc' '/dev/sdd' '/dev/sde' '/dev/sdf' '/dev/sdg' '/dev/sdh' )
@@ -300,7 +306,7 @@ echo "MEM001,0,$(date +%Y%m%d-%H%M%S),System Total Memory: $(( t / 1000000 )) G"
 f=$(free | grep -e 'Mem:.*' | awk '{ print $4 }')
 if [ $f -ls 2024000 ]
 then
-    echo "MEM002,2,$(date +%Y%m%d-%H%M%S),Critical Free Memory: $(( f / 1000000 )) G" >> $F
+    echo "MEM002,1,$(date +%Y%m%d-%H%M%S),Low Free Memory: $(( f / 1000000 )) G" >> $F
 else
     echo "MEM002,0,$(date +%Y%m%d-%H%M%S),System Free Memory: $(( f / 1000000 )) G" >> $F
 fi
@@ -322,7 +328,12 @@ echo "MEM003,0,$(date +%Y%m%d-%H%M%S),Mem Used: $p %" >> $F
 esac
 
 # MEM004
-p=$(top -bn 1 -o +%MEM | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $10 "%" " " $12 }')
+if [[ $distro == alpine ]]
+then
+    p=$(top -bn 1 | awk '{ print $6 " " $9 }' | grep -e '^[0-9]' | sort -rn | head -n 1)
+else
+    p=$(top -bn 1 -o +%MEM | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $10 "%" " " $12 }')
+fi
 echo "MEM004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
 
 # CPU001
@@ -332,12 +343,7 @@ echo "MEM004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
 #TODO
 
 # CPU003
-if [ $distro == "alpine" ]
-then
-    c=$(top -bn 1 | grep -e '^CPU.*' | awk '{ print $2 }' | sed 's/%//')
-else
-    c=$(top -bn 1 | grep -e '^%Cpu.*' | awk '{ print $2 }')
-fi
+c=$(top -bn 1 | grep -e '^%Cpu.*\|^CPU.*' | awk '{ print $2 }' | sed 's/%//')
 
 case $c in
 [5-7][0-9][,][0-9])
@@ -352,7 +358,12 @@ echo "CPU003,0,$(date +%Y%m%d-%H%M%S),Cpu Used: $c %" >> $F
 esac
 
 # CPU004
-p=$(top -bn 1 -o +%CPU | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $9 "%" " " $12 }')
+if [[ $distro == alpine ]]
+then
+    p=$(top -bn 1 | awk '{ print $8 " " $9 }' | grep -e '^[0-9]' | sort -rn | head -n 1)
+else
+    p=$(top -bn 1 -o +%CPU | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $9 "%" " " $12 }')
+fi
 echo "CPU004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
 
 # SVC001
