@@ -211,6 +211,11 @@ upg_lynis
 upg_srvcheck
 config
 ;;
+upgrade)
+upg_lynis
+upg_srvcheck
+config
+;;
 *)
 echo -e "[!] Not recognized option...\n"
 help_menu
