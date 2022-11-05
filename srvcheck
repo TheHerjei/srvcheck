@@ -272,7 +272,7 @@ else
 fi
 
 # STO004
-if [ $vm -eq0 && $container -eq 0 ]
+if [[ $vm -eq0 && $container -eq 0 ]]
 then
     devices=( '/dev/sda' '/dev/sdb' '/dev/sdc' '/dev/sdd' '/dev/sde' '/dev/sdf' '/dev/sdg' '/dev/sdh' )
 
