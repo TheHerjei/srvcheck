@@ -2,7 +2,7 @@
 
 function check_dependencies {
 
-    commands="top curl rsync netstat bash zip unzip dmidecode hddtemp"
+    commands="top curl rsync netstat bash zip unzip dmidecode hddtemp lm-sensors"
     for i in $commands
     do
         which $i 2>/dev/null
@@ -36,13 +36,13 @@ function install {
         ;;
         debian)
         apt-get update
-        apt-get install $missing -Y
+        apt-get install $missing -y
         ;;
         ol)
-        dnf install $missing -Y
+        dnf install $missing -y
         ;;
         fedora)
-        dnf install $missing -Y
+        dnf install $missing -y
         ;;
         *)
         echo "[!] Distribution not supported yet. Please report!"
