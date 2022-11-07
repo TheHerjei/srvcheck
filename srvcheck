@@ -3,18 +3,18 @@
 # Set report file
 F=/var/log/srvcheck/srvchk-$(date +%Y_%m_%d).csv
 
-# SELF001
+# SLF001
 p=$(id | awk '{ print $1 }')
 if [ $p != "uid=0(root)" ]
 then
-    self001="SELF001,2,$(date +%Y%m%d-%H%M%S),No root permission"
+    self001="SLF001,2,$(date +%Y%m%d-%H%M%S),No root permission"
     echo $self001
     exit 0
 else
-    self001="SELF001,0,$(date +%Y%m%d-%H%M%S),"
+    self001="SLF001,0,$(date +%Y%m%d-%H%M%S),"
 fi
 
-# SELF002
+# SLF002
 missing=0
 if [ ! -e /usr/bin/top ]
 then
@@ -46,30 +46,30 @@ fi
 
 if [[ ! $missing -eq 0 ]]
 then
-    self002="SELF002,2,$(date +%Y%m%d-%H%M%S),Missing srvcheck dependencies"
+    self002="SLF002,2,$(date +%Y%m%d-%H%M%S),Missing srvcheck dependencies"
     echo $self002
     exit 0
 else
-    self002="SELF002,0,$(date +%Y%m%d-%H%M%S),"
+    self002="SLF002,0,$(date +%Y%m%d-%H%M%S),"
 fi
 
 
-# SELF003
+# SLF003
 if [ ! -d /var/log/srvcheck ]
 then
-    self003="SELF003,1,$(date +%Y%m%d-%H%M%S),First run of srvcheck"
+    self003="SLF003,1,$(date +%Y%m%d-%H%M%S),First run of srvcheck"
     mkdir /var/log/srvcheck
 else
-    self003="SELF003,0,$(date +%Y%m%d-%H%M%S),"
+    self003="SLF003,0,$(date +%Y%m%d-%H%M%S),"
 fi
 
-# SELF004
+# SLF004
 if [[ ! -e $F ]]
 then
-    self004="SELF004,0,$(date +%Y%m%d-%H%M%S),"
+    self004="SLF004,0,$(date +%Y%m%d-%H%M%S),"
     touch $F
 else
-    self004="SELF004,1,$(date +%Y%m%d-%H%M%S),Log file already exist, overwriting."
+    self004="SLF004,1,$(date +%Y%m%d-%H%M%S),Log file already exist, overwriting."
 fi
 
 echo "CheckID,ResultCode,Timestamp,Notes" > $F

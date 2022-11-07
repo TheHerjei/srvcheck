@@ -29,10 +29,10 @@ CheckID;ResultCode;Timestamp;Notes
 
 |Implemented|CheckID|Description|
 |-----------|-------|-----------|
-|V |SELF001|Check root permission|
-|V |SELF002|Check srvcheck dependencies|
-|V |SELF002|Check report dir existing|
-|V |SELF004|Initialize report file|
+|V |SLF001|Check root permission|
+|V |SLF002|Check srvcheck dependencies|
+|V |SLF002|Check report dir existing|
+|V |SLF004|Initialize report file|
 |V |SYS001|Check linux distro|
 |V |SYS002|Check machine HOSTNAME|
 |V |SYS003|Check kernel version|
