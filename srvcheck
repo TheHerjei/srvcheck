@@ -502,7 +502,7 @@ fi
 export RESTIC_PASSWORD=CHANGERESTICPASSWORD
 export RESTIC_REPOSITORY=CHANGERESTICREPOPATH
 
-if [[ $RESTIC_PASSWORD == "CHANGERESTICPASSWORD" ]]
+if [[ $RESTIC_PASSWORD == "" ]]
 then
     echo "BKP005,0,$(date +%Y%m%d-%H%M%S),Restic not configurated: Skipping" >> $F
 else

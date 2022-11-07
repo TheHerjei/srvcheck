@@ -127,8 +127,10 @@ function config {
         echo "[.] Enter password for restic repo"
         read resticpwd
         sed -i "s/CHANGERESTICPASSWORD/$resticpwd/" /opt/srvcheck/srvcheck
-        sed -i "s/CHANGERESTICREPOPATH/$resticpath/" /opt/srvcheck/srvcheck
+        sed -i "s~CHANGERESTICREPOPATH~$resticpath~" /opt/srvcheck/srvcheck
         echo "[#] Restic configured..."
+    else
+        sed -i 's/CHANGERESTICPASSWORD/""/' /opt/srvcheck/srvcheck
     fi
     
     echo "[.] Choose srvcheck frequency"
