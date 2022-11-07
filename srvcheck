@@ -95,7 +95,7 @@ if [ $u == "days," ]
 then
     echo "SYS004,0,$(date +%Y%m%d-%H%M%S),$(uptime | awk '{ print $3 " " $4 }')" >> $F
 else
-    echo "SYS004,1,$(date +%Y%m%d-%H%M%S),Running for less then 1 day: $(uptime | awk '{ print $3 }')" >> $F
+    echo "SYS004,1,$(date +%Y%m%d-%H%M%S),Running for less then 1 day: $(uptime | awk '{ print $3 " " $4 }')" >> $F
 fi
 
 # SYS005
@@ -144,64 +144,52 @@ else
 fi
 
 # SYS008
-if [ $container -eq 0 ]
+if [[ $container -eq 0 && $vm -eq 0 ]]
 then
-    if [ $vm -eq 0 ]
-    then
-        t=$(sensors -u | grep -e "temp1_input:.*" | awk '{ print $2 }' | head -n 1)
-
-        case $t in
-        [6-7][0-9].*)
-        echo "SYS008,1,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
-        ;;
-        [8-9][0-9].*)
-        echo "SYS008,2,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
-        ;;
-        *)
-        echo "SYS008,0,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
-        ;;
-        esac
-    else
-        echo "SYS008,0,$(date +%Y%m%d-%H%M%S),VM: $vm - Skipping" >> $F
-    fi
+    t=$(sensors -u | grep -e "temp1_input:.*" | awk '{ print $2 }' | sort -rn | head -n 1)
+    case $t in
+    [6-7][0-9].*)
+    echo "SYS008,1,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
+    ;;
+    [8-9][0-9].*)
+    echo "SYS008,2,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
+    ;;
+    *)
+    echo "SYS008,0,$(date +%Y%m%d-%H%M%S),CPU Temp: $t °C" >> $F
+    ;;
+    esac
 else
-    echo "SYS008,0,$(date +%Y%m%d-%H%M%S),Container: $container - Skipping" >> $F
+    echo "SYS008,0,$(date +%Y%m%d-%H%M%S),VM/Container - Skipping" >> $F
 fi
 
 # SYS009
 # TODO
 
 # SYS010
-if [ $container -eq 0 ]
+if [[ $container -eq 0 && $vm -eq 0 ]]
 then
-    if [ $vm -eq 0 ]
-    then
-        devices=( '/dev/sda' '/dev/sdb' '/dev/sdc' '/dev/sdd' '/dev/sde' '/dev/sdf' '/dev/sdg' '/dev/sdh' )
-        
-        for i in "${devices[@]}"
-        do
-            t=$(hddtemp $i 2>/dev/null | awk '{ print $NF }' | sed s/[°C]//g)
-
-            case $t in
-            [6-7][0-9])
-            echo "SYS010,1,$(date +%Y%m%d-%H%M%S),$i Temp: $t °C" >> $F
-            ;;
-            [8-9][0-9])
-            echo "SYS010,2,$(date +%Y%m%d-%H%M%S),$i Temp:  $t °C" >> $F
-            ;;
-            "")
-            echo "$i not found"
-            ;;
-            *)
-            echo "SYS010,0,$(date +%Y%m%d-%H%M%S),$i Temp:  $t °C" >> $F
-            ;;
-            esac
-        done
-    else
-        echo "SYS010,0,$(date +%Y%m%d-%H%M%S),VM: $vm - Skipping" >> $F
-    fi
+    devices=( '/dev/sda' '/dev/sdb' '/dev/sdc' '/dev/sdd' '/dev/sde' '/dev/sdf' '/dev/sdg' '/dev/sdh' )
+    
+    for i in "${devices[@]}"
+    do
+        t=$(hddtemp $i 2>/dev/null | awk '{ print $NF }' | sed s/[°C]//g)
+        case $t in
+        [6-7][0-9])
+        echo "SYS010,1,$(date +%Y%m%d-%H%M%S),$i Temp: $t °C" >> $F
+        ;;
+        [8-9][0-9])
+        echo "SYS010,2,$(date +%Y%m%d-%H%M%S),$i Temp:  $t °C" >> $F
+        ;;
+        "")
+        echo "$i not found"
+        ;;
+        *)
+        echo "SYS010,0,$(date +%Y%m%d-%H%M%S),$i Temp:  $t °C" >> $F
+        ;;
+        esac
+    done
 else
-    echo "SYS010,0,$(date +%Y%m%d-%H%M%S),Container: $container - Skipping" >> $F
+    echo "SYS010,0,$(date +%Y%m%d-%H%M%S),VM/Containar - Skipping" >> $F
 fi
 
 # STO001
@@ -456,7 +444,7 @@ then
     restic=1
     echo "BKP001,0,$(date +%Y%m%d-%H%M%S),Restic backup used" >> $F
 else
-    echo "BKP001,1,$(date +%Y%m%d-%H%M%S),Restic backup not find" >> $F
+    echo "BKP001,1,$(date +%Y%m%d-%H%M%S),Restic backup not found" >> $F
 fi
 
 # BKP002
@@ -511,7 +499,27 @@ else
 fi
 
 # BKP005
-# TODO
+export RESTIC_PASSWORD=CHANGERESTICPASSWORD
+export RESTIC_REPOSITORY=CHANGERESTICREPOPATH
+
+if [[ $RESTIC_PASSWORD == "CHANGERESTICPASSWORD" ]]
+then
+    echo "BKP005,0,$(date +%Y%m%d-%H%M%S),Restic not configurated: Skipping" >> $F
+else
+    r=$(restic diff $(cat /var/log/restic.log | tail -n 4 | head -n 2 | awk '{ print $1 }') | tail -n 2 | awk '{ print $2 }')
+
+    for i in $r
+    do
+    	case $i in
+    	0.0)
+    	echo "BKP005,1,$(date +%Y%m%d-%H%M%S),No change in last 2 snapshots!" >> $F
+    	;;
+    	*)
+    	echo "BKP005,0,$(date +%Y%m%d-%H%M%S)," >> $F
+    	;;
+    	esac
+    done
+fi
 
 # NET001
 ping -c 2 8.8.8.8

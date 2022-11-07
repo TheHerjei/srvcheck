@@ -120,6 +120,17 @@ function config {
     sed -i "s/CHANGESERVER/$ssh_server/" /opt/srvcheck/srvcheck
     sed -i "s/CHANGEDOMAIN/$domain/" /opt/srvcheck/srvcheck
 
+    echo "[.] Enter restic repository path (enter for skipping)"
+    read resticpath
+    if [[ ! $resticpath == "" ]]
+    then
+        echo "[.] Enter password for restic repo"
+        read resticpwd
+        sed -i "s/CHANGERESTICPASSWORD/$resticpwd/" /opt/srvcheck/srvcheck
+        sed -i "s/CHANGERESTICREPOPATH/$resticpath/" /opt/srvcheck/srvcheck
+        echo "[#] Restic configured..."
+    fi
+    
     echo "[.] Choose srvcheck frequency"
     echo "[.] daily weekly monthly"
     read freq

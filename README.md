@@ -70,7 +70,7 @@ CheckID;ResultCode;Timestamp;Notes
 |V |BKP002|Check exist & usage of /mnt/bkp|
 |V |BKP003|Check last backup time/date|
 |V |BKP004|Check restic snapshots count|
-|TODO|BKP005|Check difference between last 2 restic backups|
+|V |BKP005|Check difference between last 2 restic backups|
 |V |NET001|Check internet connection|
 |V |NET002|Check dns|
 |TODO|NET003|Check ESTABLISHED connections|
