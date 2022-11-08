@@ -256,7 +256,7 @@ function help_menu {
     echo -e "remove\tRemove srcheck and lynis interactively"
     echo -e "help\tDisplay help and exit\n"
 
-}
+}e
 
 # Root permission check
 p=$(id | awk '{ print $1 }')
@@ -284,7 +284,7 @@ check_dependencies
 install
 ;;
 remove)
-uninstall
+remove
 ;;
 "")
 check_dependencies
