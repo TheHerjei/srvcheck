@@ -80,4 +80,5 @@ CheckID;ResultCode;Timestamp;Notes
 |V |SEC002|Launch Lynis audit system|
 |V |SEC003|Parse Lynis warnings|
 |V |SEC004|Parse Lynis suggestions|
-|V |SYN001|Rsync log files|
+|V |SYN001|Log files retention|
+|V |SYN002|Rsync log files|s

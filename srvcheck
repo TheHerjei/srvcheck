@@ -646,11 +646,27 @@ else
 fi
 
 # SYN001
+r=3
+if [ $(ls /var/log/srvcheck/ | wc -l) -gt 3 ]
+then
+    n=$(ls /var/log/srvcheck/ | wc -l)
+    while [ $n -gt $r ]
+    do
+        f=$(ls -t /var/log/srvcheck/ | head -n 1)
+        rm /var/log/srvcheck/$f
+        echo "SYN001,1,$(date +%Y%m%d-%H%M%S),Log Retention: removed $f" >> $F
+        let n--
+    done
+else
+    echo "SYN001,0,$(date +%Y%m%d-%H%M%S)," >> $F
+fi
+
+# SYN002
 rsync -zav --rsh="ssh -p CHANGEPORT" /var/log/srvcheck/ CHANGEUSER@CHANGESERVER:/var/log/srvcheck/CHANGEDOMAIN/$HOSTNAME/
 
 if [[ ! $? -eq 0 ]]
 then
-    echo "SYN001,2,$(date +%Y%m%d-%H%M%S),Log Sync Failed" >> $F
+    echo "SYN002,2,$(date +%Y%m%d-%H%M%S),Log Sync Failed" >> $F
 else
-    echo "SYN001,0,$(date +%Y%m%d-%H%M%S)," >> $F
+    echo "SYN002,0,$(date +%Y%m%d-%H%M%S)," >> $F
 fi
