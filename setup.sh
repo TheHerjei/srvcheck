@@ -178,6 +178,71 @@ function config {
     
 }
 
+function remove {
+
+    echo "[!] Removing srvcheck..."
+    echo "[.] Remove /opt/srvcheck folder? (y/n)"
+    read choice
+    case $choice in
+    y)
+    echo "[#] Removing..."
+    rm -rf /opt/srvcheck
+    echo "[#] Done"
+    ;;
+    *)
+    echo "[#] Skipping"
+    ;;
+    esac
+
+    echo "[.] Remove /opt/lynis folder? (y/n)"
+    read choice
+    case $choice in
+    y)
+    echo "[#] Removing..."
+    rm -rf /opt/lynis
+    echo "[#] Done"
+    ;;
+    *)
+    echo "[#] Skipping"
+    ;;
+    esac
+
+    echo "[.] Remove /var/log/srvcheck folder? (y/n)"
+    read choice
+    case $choice in
+    y)
+    echo "[#] Removing..."
+    rm -rf /var/log/srvcheck
+    if [[ $distro == alpine ]]
+    then
+        find /etc/periodic/ -maxdepth 1 -follow -type l -delete
+    else
+        find /etc/cron.* -maxdepth 2 -follow -type l -delete
+    fi
+
+    echo "[#] Done"
+    ;;
+    *)
+    echo "[#] Skipping"
+    ;;
+    esac
+
+    echo "[.] Remove lynis.log and lynis.dat files? (y/n)"
+    read choice
+    case $choice in
+    y)
+    echo "[#] Removing..."
+    rm -rf /var/log/lynis.log
+    rm -rf /var/log/lynis.dat
+    echo "[#] Done"
+    ;;
+    *)
+    echo "[#] Skipping"
+    ;;
+    esac
+
+}
+
 function help_menu {
 
     echo -e "SRVCHECK - Server automated check tool...\n"
@@ -188,6 +253,7 @@ function help_menu {
     echo -e "check\tCheck required dependencies and exit"
     echo -e "dependencies\tInstall dependencies and exit"
     echo -e "upgrade\tUpgrade srvcheck and lynis"
+    echo -e "remove\tRemove srcheck and lynis interactively"
     echo -e "help\tDisplay help and exit\n"
 
 }
@@ -216,6 +282,9 @@ check_dependencies
 install)
 check_dependencies
 install
+;;
+remove)
+uninstall
 ;;
 "")
 check_dependencies
