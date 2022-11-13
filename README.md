@@ -1,8 +1,13 @@
 # Server Check
 
-**Objective:**
-A Script to run on servers or Workstations to automatically run checks system wide.
-The script outputs in cvs format to be easily readable and processed or filtered as needed.
+**srvcheck:** - Script to run on servers or Workstations to automatically run checks system wide.
+The output in cvs format is easy to read and parsed or filtered as needed. *FUTURE IMPLEMENTATIONS: Can be run "standalone" or as a "client" for srvmonit.*
+
+**setup.sh** - Script to easily install, configure or remove srvcheck. At this time it can configure: package dependencies, ssh-key access for log server, automation scheduling, domain name (for log server archiviation).
+*FUTURE IMPLEMENTATIONS: choose server or client installation, config rsync client or rsyncd.*
+
+***TODO*** **srvmonit** - Service that act as "server" for several instance of srvcheck. It received the report generated from every srvcheck instances via rsync, manage the report retention policy, parse the errors and generate a "general report", with enphasys on critical errors and warnings for each "domain".
+
 
 ## Installation
 
@@ -17,7 +22,7 @@ lastly:
 
 and follow onscreen instructions.
 
-## Output scheme:
+## Srvcheck Output scheme:
 
 *Output report scheme:*
 CheckID;ResultCode;Timestamp;Notes

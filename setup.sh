@@ -133,7 +133,7 @@ function config {
         sed -i 's/CHANGERESTICPASSWORD/""/' /opt/srvcheck/srvcheck
     fi
     
-    echo "[.] Choose srvcheck frequency"
+    echo "[.] Choose srvcheck schedule"
     echo "[.] daily weekly monthly"
     read freq
 
@@ -141,7 +141,7 @@ function config {
     daily)
     if [[ $distro == alpine ]]
     then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/srvcheck
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
     else
     ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
     fi
@@ -149,7 +149,7 @@ function config {
     weekly)
     if [[ $distro == alpine ]]
     then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/srvcheck
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
     else
     ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
     fi
@@ -157,19 +157,19 @@ function config {
     monthly)
     if [[ $distro == alpine ]]
     then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/srvcheck
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
     else
     ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
     fi
     ;;
     *)
     echo "[!] Unrecognised option"
-    echo "[#] Auto choosing to weekly..."
+    echo "[#] Auto choosing to daily..."
     if [[ $distro == alpine ]]
     then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/srvcheck
+    ln -s /opt/srvcheck/srvcheck /etc/periodic/daily/srvcheck
     else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
+    ln -s /opt/srvcheck/srvcheck /etc/cron.daily/srvcheck
     fi
     ;;
     esac
