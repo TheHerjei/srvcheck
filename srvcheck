@@ -330,10 +330,12 @@ fi
 echo "MEM004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
 
 # CPU001
-#TODO
+n=$(sudo dmidecode --type=processor | grep Version.* | sed 's/Version: //g')
+echo "CPU001,1,$(date +%Y%m%d-%H%M%S),CPU: $n" >> $F
 
 # CPU002
-#TODO
+n=$(sudo dmidecode --type=processor | grep "Thread Count.*" | sed 's/Thread Count: //g')
+echo "CPU001,1,$(date +%Y%m%d-%H%M%S),Thread Count: $n" >> $F
 
 # CPU003
 c=$(top -bn 1 | grep -e '^%Cpu.*\|^CPU.*' | awk '{ print $2 }' | sed 's/%//')
@@ -652,7 +654,7 @@ then
     n=$(ls /var/log/srvcheck/ | wc -l)
     while [ $n -gt $r ]
     do
-        f=$(ls -t /var/log/srvcheck/ | head -n 1)
+        f=$(ls -t /var/log/srvcheck/ | tail -n 1)
         rm /var/log/srvcheck/$f
         echo "SYN001,1,$(date +%Y%m%d-%H%M%S),Log Retention: removed $f" >> $F
         let n--
