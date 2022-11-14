@@ -69,7 +69,7 @@ then
     self004="SLF004,0,$(date +%Y%m%d-%H%M%S),"
     touch $F
 else
-    self004="SLF004,1,$(date +%Y%m%d-%H%M%S),Log file already exist, overwriting."
+    self004="SLF004,1,$(date +%Y%m%d-%H%M%S),Log file already exist overwriting."
 fi
 
 echo "CheckID,ResultCode,Timestamp,Notes" > $F
@@ -89,7 +89,7 @@ echo "SYS002,0,$(date +%Y%m%d-%H%M%S),Hostname: $HOSTNAME" >> $F
 echo "SYS003,0,$(date +%Y%m%d-%H%M%S),kernel: $(uname -r)" >> $F
 
 # SYS004
-u=$(uptime | awk '{ print $4 }')
+u=$(uptime | awk '{ print $4 }' | sed 's/,/./g')
 
 if [ $u == "days," ]
 then
@@ -325,7 +325,7 @@ if [[ $distro == alpine ]]
 then
     p=$(top -bn 1 | awk '{ print $6 " " $9 }' | grep -e '^[0-9]' | sort -rn | head -n 1)
 else
-    p=$(top -bn 1 -o +%MEM | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $10 "%" " " $12 }')
+    p=$(top -bn 1 -o +%MEM | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $10 "%" " " $12 }' | sed 's/,/./g')
 fi
 echo "MEM004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
 
@@ -338,7 +338,7 @@ n=$(sudo dmidecode --type=processor | grep "Thread Count.*" | sed 's/Thread Coun
 echo "CPU001,1,$(date +%Y%m%d-%H%M%S),Thread Count: $n" >> $F
 
 # CPU003
-c=$(top -bn 1 | grep -e '^%Cpu.*\|^CPU.*' | awk '{ print $2 }' | sed 's/%//')
+c=$(top -bn 1 | grep -e '^%Cpu.*\|^CPU.*' | awk '{ print $2 }' | sed 's/%//' | sed 's/,/./g')
 
 case $c in
 [5-7][0-9][,][0-9])
@@ -357,7 +357,7 @@ if [[ $distro == alpine ]]
 then
     p=$(top -bn 1 | awk '{ print $8 " " $9 }' | grep -e '^[0-9]' | sort -rn | head -n 1)
 else
-    p=$(top -bn 1 -o +%CPU | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $9 "%" " " $12 }')
+    p=$(top -bn 1 -o +%CPU | grep -e '^\s.*' | head -n 2 | tail -n 1 | awk '{ print $9 "%" " " $12 }' | sed 's/,/./g')
 fi
 echo "CPU004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
 
