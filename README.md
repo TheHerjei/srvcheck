@@ -6,15 +6,23 @@ The output in cvs format is easy to read and parse or filter as needed. *FUTURE 
 **setup.sh** - Script to easily install, configure or remove srvcheck. At this time it can configure: package dependencies, ssh-key access for log server, automation scheduling, domain name (for log server archiviation).
 *FUTURE IMPLEMENTATIONS: choose server or client installation, config rsync client or rsyncd.*
 
-***TODO*** **srvmonit** - Service that act as "server" for several instance of srvcheck. It received the report generated from every srvcheck instances via rsync, manage the report retention policy, parse the errors and generate a "general report", with enphasys on critical errors and warnings for each "domain".
+**srvmonit** - Service that act as "server" for several instance of srvcheck. It received the report generated from every srvcheck instances via ssh, manage the report retention policy, parse the errors and generate a "general report", with enphasys on critical errors and warnings for each "domain".
 
 
 ## Installation
 
+**Client mode:**
 run on terminal as root user:
 `wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh";chmod +x setup.sh;sh setup.sh`
 
 and follow onscreen instructions.
+
+**Server mode:**
+run on terminal as root user:
+`wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh";chmod +x setup.sh;sh setup.sh server`
+
+*Note:*
+    Make sure to configure your Log server to be reachable via ssh (for over the internet application you must run srvmonit on VPS or use port-forwarding).
 
 ## Srvcheck Output scheme:
 

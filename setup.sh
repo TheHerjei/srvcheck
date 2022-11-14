@@ -178,6 +178,16 @@ function config {
     
 }
 
+function config_srv {
+    echo "[#] Configuring srvmonit to run daily..."
+    if [[ $distro == alpine ]]
+    then
+    ln -s /opt/srvcheck/srvmonit /etc/periodic/daily/srvmonit
+    else
+    ln -s /opt/srvcheck/srvmonit /etc/cron.daily/srvmonit
+    fi
+}
+
 function remove {
 
     echo "[!] Removing srvcheck..."
@@ -249,7 +259,8 @@ function help_menu {
     echo -e "setup.sh - Script to configure and upgrade srvcheck.\n"
     echo -e "\tUse: setup.sh [OPTIONS]\n"
     echo -e "OPTIONS:"
-    echo -e "\tWithout options start an interactive installation (Upgrade if already installed)\n"
+    echo -e "\tWithout options start an interactive installation of client mode (Upgrade if already installed)\n"
+    echo -e "server\tInstall a server instance of srvmonit"
     echo -e "check\tCheck required dependencies and exit"
     echo -e "dependencies\tInstall dependencies and exit"
     echo -e "upgrade\tUpgrade srvcheck and lynis"
@@ -285,6 +296,13 @@ install
 ;;
 remove)
 remove
+;;
+server)
+check_dependencies
+install
+upg_srvcheck
+upg_lynis
+config_srv
 ;;
 "")
 check_dependencies
