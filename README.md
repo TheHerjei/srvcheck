@@ -12,13 +12,7 @@ The output in cvs format is easy to read and parsed or filtered as needed. *FUTU
 ## Installation
 
 run on terminal as root user:
-`wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh"`
-
-then run:
-`chmod +x setup.sh`
-
-lastly:
-`./setup.sh`
+`wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh";chmod +x setup.sh;sh setup.sh`
 
 and follow onscreen instructions.
 
