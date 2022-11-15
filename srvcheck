@@ -239,12 +239,12 @@ then
 
     for i in $n
     do
-        v=$(vgs -o vg_name,vg_free --units G --noheadings | grep $i | sed 's/\s|G//g' | awk '{ print $2 }')
+        v=$(vgs -o vg_name,vg_free --units G --noheadings | grep $i | sed 's/[\sG]//g' | awk '{ print $2 }')
         case $v in
         [0-9].*)
         echo "STO003,2,$(date +%Y%m%d-%H%M%S),Critical free space: $i $v G" >> $F
         ;;
-        *[0-1][0-9].*)
+        [0-1][0-9].*)
         echo "STO003,1,$(date +%Y%m%d-%H%M%S),Low free space: $i $v G" >> $F
         ;;
         "")
@@ -296,7 +296,8 @@ t=$(free | grep -e 'Mem:.*' | awk '{ print $2 }')
 echo "MEM001,0,$(date +%Y%m%d-%H%M%S),System Total Memory: $(( t / 1000000 )) G" >> $F
 
 # MEM002
-f=$(free | grep -e 'Mem:.*' | awk '{ print $4 }')
+f=$(free | grep -e 'Mem:.*' | awk '{ print $3 }')
+let "f = $t - $f"
 if [ $f -lt 2024000 ]
 then
     echo "MEM002,1,$(date +%Y%m%d-%H%M%S),Low Free Memory: $(( f / 1000000 )) G" >> $F

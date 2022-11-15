@@ -83,6 +83,7 @@ function upg_srvcheck {
     then
         echo "[#] Srvcheck already exist. Upgrading."
         srvcheck=1
+        cat /opt/srvcheck/srvcheck | grep 'rsync.*-zav' > srvsync.save
     else
         echo "[#] Srvcheck first installation."
         mkdir /opt/srvcheck
@@ -98,84 +99,90 @@ function upg_srvcheck {
 }
 
 function config {
-
-    echo "[#] Configuration."
-    echo "[.] Enter a domain name for $HOSTNAME"
-    read domain
-    echo "[.] Enter ssh server name or ip"
-    read ssh_server
-    echo "[.] Enter ssh server port"
-    read ssh_port
-    echo "[.] Enter ssh user account"
-    read ssh_user
-
-    ssh-keygen -A rsa -f /root/.ssh/id_rsa.pub
-    ssh_key=$(cat /root/.ssh/id_rsa.pub)
-    echo "[.] Enter password for $ssh_user @ $ssh_server"
-    ssh $ssh_user@$ssh_server -p $ssh_port "echo $ssh_key >> .ssh/authorized_keys"
-
-    echo "[#] Ssh keys exchange complete"
-    sed -i "s/CHANGEPORT/$ssh_port/" /opt/srvcheck/srvcheck
-    sed -i "s/CHANGEUSER/$ssh_user/" /opt/srvcheck/srvcheck
-    sed -i "s/CHANGESERVER/$ssh_server/" /opt/srvcheck/srvcheck
-    sed -i "s/CHANGEDOMAIN/$domain/" /opt/srvcheck/srvcheck
-
-    echo "[.] Enter restic repository path (enter for skipping)"
-    read resticpath
-    if [[ ! $resticpath == "" ]]
+    if [ $srvcheck -eq 1 ]
     then
-        echo "[.] Enter password for restic repo"
-        read resticpwd
-        sed -i "s/CHANGERESTICPASSWORD/$resticpwd/" /opt/srvcheck/srvcheck
-        sed -i "s~CHANGERESTICREPOPATH~$resticpath~" /opt/srvcheck/srvcheck
-        echo "[#] Restic configured..."
+        echo "[#] Restoring previous configuration..."
+        c=$(cat srvsync.save)
+        sed -i "s/rsync -zav.*/$c/" /opt/srvcheck/srvcheck
+        echo "[#] Done!"
     else
-        sed -i 's/CHANGERESTICPASSWORD/""/' /opt/srvcheck/srvcheck
-    fi
-    
-    echo "[.] Choose srvcheck schedule"
-    echo "[.] daily weekly monthly"
-    read freq
+        echo "[#] Configuration."
+        echo "[.] Enter a domain name for $HOSTNAME"
+        read domain
+        echo "[.] Enter ssh server name or ip"
+        read ssh_server
+        echo "[.] Enter ssh server port"
+        read ssh_port
+        echo "[.] Enter ssh user account"
+        read ssh_user
 
-    case $freq in
-    daily)
-    if [[ $distro == alpine ]]
-    then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
-    else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
-    fi
-    ;;
-    weekly)
-    if [[ $distro == alpine ]]
-    then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
-    else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
-    fi
-    ;;
-    monthly)
-    if [[ $distro == alpine ]]
-    then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
-    else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
-    fi
-    ;;
-    *)
-    echo "[!] Unrecognised option"
-    echo "[#] Auto choosing to daily..."
-    if [[ $distro == alpine ]]
-    then
-    ln -s /opt/srvcheck/srvcheck /etc/periodic/daily/srvcheck
-    else
-    ln -s /opt/srvcheck/srvcheck /etc/cron.daily/srvcheck
-    fi
-    ;;
-    esac
+        ssh-keygen -A rsa -f /root/.ssh/id_rsa.pub
+        ssh_key=$(cat /root/.ssh/id_rsa.pub)
+        echo "[.] Enter password for $ssh_user @ $ssh_server"
+        ssh $ssh_user@$ssh_server -p $ssh_port "echo $ssh_key >> .ssh/authorized_keys"
 
-    echo "[#] Done"
-    
+        echo "[#] Ssh keys exchange complete"
+        sed -i "s/CHANGEPORT/$ssh_port/" /opt/srvcheck/srvcheck
+        sed -i "s/CHANGEUSER/$ssh_user/" /opt/srvcheck/srvcheck
+        sed -i "s/CHANGESERVER/$ssh_server/" /opt/srvcheck/srvcheck
+        sed -i "s/CHANGEDOMAIN/$domain/" /opt/srvcheck/srvcheck
+
+        echo "[.] Enter restic repository path (enter for skipping)"
+        read resticpath
+        if [[ ! $resticpath == "" ]]
+        then
+            echo "[.] Enter password for restic repo"
+            read resticpwd
+            sed -i "s/CHANGERESTICPASSWORD/$resticpwd/" /opt/srvcheck/srvcheck
+            sed -i "s~CHANGERESTICREPOPATH~$resticpath~" /opt/srvcheck/srvcheck
+            echo "[#] Restic configured..."
+        else
+            sed -i 's/CHANGERESTICPASSWORD/""/' /opt/srvcheck/srvcheck
+        fi
+
+        echo "[.] Choose srvcheck schedule"
+        echo "[.] daily weekly monthly"
+        read freq
+
+        case $freq in
+        daily)
+        if [[ $distro == alpine ]]
+        then
+        ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
+        else
+        ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
+        fi
+        ;;
+        weekly)
+        if [[ $distro == alpine ]]
+        then
+        ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
+        else
+        ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
+        fi
+        ;;
+        monthly)
+        if [[ $distro == alpine ]]
+        then
+        ln -s /opt/srvcheck/srvcheck /etc/periodic/$freq/srvcheck
+        else
+        ln -s /opt/srvcheck/srvcheck /etc/cron.$freq/srvcheck
+        fi
+        ;;
+        *)
+        echo "[!] Unrecognised option"
+        echo "[#] Auto choosing to daily..."
+        if [[ $distro == alpine ]]
+        then
+        ln -s /opt/srvcheck/srvcheck /etc/periodic/daily/srvcheck
+        else
+        ln -s /opt/srvcheck/srvcheck /etc/cron.daily/srvcheck
+        fi
+        ;;
+        esac
+
+        echo "[#] Done"
+    fi    
 }
 
 function config_srv {
