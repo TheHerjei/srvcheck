@@ -103,7 +103,7 @@ function config {
     then
         echo "[#] Restoring previous configuration..."
         c=$(cat srvsync.save)
-        sed -i "s/rsync -zav.*/$c/" /opt/srvcheck/srvcheck
+        sed -i "s~^rsync.*~$c~" /opt/srvcheck/srvcheck
         echo "[#] Done!"
     else
         echo "[#] Configuration."
