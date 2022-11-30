@@ -91,7 +91,7 @@ echo "SYS003,0,$(date +%Y%m%d-%H%M%S),kernel: $(uname -r)" >> $F
 # SYS004
 u=$(uptime | awk '{ print $4 }' | sed 's/,/./g')
 
-if [ $u == "days," ]
+if [ $u == "days." ]
 then
     echo "SYS004,0,$(date +%Y%m%d-%H%M%S),$(uptime | awk '{ print $3 " " $4 }')" >> $F
 else
@@ -331,12 +331,12 @@ fi
 echo "MEM004,0,$(date +%Y%m%d-%H%M%S),$p" >> $F
 
 # CPU001
-n=$(sudo dmidecode --type=processor | grep Version.* | sed 's/Version: //g')
-echo "CPU001,1,$(date +%Y%m%d-%H%M%S),CPU: $n" >> $F
+n=$(dmidecode --type=processor | grep Version.* | sed 's/Version: //g')
+echo "CPU001,0,$(date +%Y%m%d-%H%M%S),CPU: $n" >> $F
 
 # CPU002
-n=$(sudo dmidecode --type=processor | grep "Thread Count.*" | sed 's/Thread Count: //g')
-echo "CPU001,1,$(date +%Y%m%d-%H%M%S),Thread Count: $n" >> $F
+n=$(dmidecode --type=processor | grep "Thread Count.*" | sed 's/Thread Count: //g')
+echo "CPU002,0,$(date +%Y%m%d-%H%M%S),Thread Count: $n" >> $F
 
 # CPU003
 c=$(top -bn 1 | grep -e '^%Cpu.*\|^CPU.*' | awk '{ print $2 }' | sed 's/%//' | sed 's/,/./g')
@@ -489,7 +489,7 @@ then
     [0-5])
     echo "BKP004,1,$(date +%Y%m%d-%H%M%S),Restic snapshots count: $B" >> $F
     ;;
-    [0-2][0-9])
+    [0-4][0-9])
     echo "BKP004,0,$(date +%Y%m%d-%H%M%S),Restic snapshots count: $B" >> $F
     ;;
     *)

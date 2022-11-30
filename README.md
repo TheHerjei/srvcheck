@@ -14,13 +14,13 @@ The output in cvs format is easy to read and parse or filter as needed.
 
 **Client mode:**
 run on terminal as root user:
-`wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh";chmod +x setup.sh;sh setup.sh`
+`wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh";chmod +x setup.sh;bash setup.sh`
 
 and follow onscreen instructions.
 
 **Server mode:**
 run on terminal as root user:
-`wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh";chmod +x setup.sh;sh setup.sh server`
+`wget -O setup.sh "https://raw.githubusercontent.com/TheHerjei/srvcheck/main/setup.sh";chmod +x setup.sh;bash setup.sh server`
 
 *Note:*
     Make sure to configure your Log server to be reachable via ssh (for over the internet application you must run srvmonit on VPS or use port-forwarding).
@@ -39,7 +39,7 @@ CheckID;ResultCode;Timestamp;Notes
 |-----------|-------|-----------|
 |OK|SLF001|Check root permission|
 |OK|SLF002|Check srvcheck dependencies|
-|OK|SLF002|Check report dir existing|
+|OK|SLF003|Check report dir existing|
 |OK|SLF004|Initialize report file|
 |OK|SYS001|Check linux distro|
 |OK|SYS002|Check machine HOSTNAME|
