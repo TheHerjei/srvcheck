@@ -204,6 +204,8 @@ function remove {
     y)
     echo "[#] Removing..."
     rm -rf /opt/srvcheck
+    find /etc/cron.* -name "srvcheck" -type l -delete
+    find /etc/periodic/* -name "srvcheck" -type l -delete
     echo "[#] Done"
     ;;
     *)
@@ -260,6 +262,22 @@ function remove {
 
 }
 
+function backup {
+    F="$(date +%Y$%m%d)-srvcheck.bkp"
+    touch $F
+    echo "[#] Backupping configs..."
+    cat /opt/srvcheck/srvcheck | grep 'rsync.*-zav' >> $F
+    cat /opt/srvcheck/srvcheck | grep 'bkpPartition.*-zav' >> $F
+
+    echo "[#] Done"
+    exit 0
+}
+
+function restore {
+    echo "[!] Not yet implemented..."
+    exit 0
+}
+
 function help_menu {
 
     echo -e "SRVCHECK - Server automated check tool...\n"
@@ -268,9 +286,12 @@ function help_menu {
     echo -e "OPTIONS:"
     echo -e "\tWithout options start an interactive installation of client mode (Upgrade if already installed)\n"
     echo -e "server\tInstall a server instance of srvmonit"
+    echo -e "silent\tClient installation with default configs. Require manual configuration or restore of previous conf."
     echo -e "check\tCheck required dependencies and exit"
     echo -e "dependencies\tInstall dependencies and exit"
     echo -e "upgrade\tUpgrade srvcheck and lynis"
+    echo -e "backup\tStores configs in text file and exit"
+    echo -e "restore\tRestore conf from a file"
     echo -e "remove\tRemove srcheck and lynis interactively"
     echo -e "help\tDisplay help and exit\n"
 
@@ -301,6 +322,12 @@ install)
 check_dependencies
 install
 ;;
+silent)
+check_dependencies
+install
+upg_lynis
+upg_srvcheck
+;;
 remove)
 remove
 ;;
@@ -322,6 +349,12 @@ upgrade)
 upg_lynis
 upg_srvcheck
 config
+;;
+backup)
+backup
+;;
+restore)
+restore
 ;;
 *)
 echo -e "[!] Not recognized option...\n"
