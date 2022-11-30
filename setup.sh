@@ -2,7 +2,7 @@
 
 function check_dependencies {
 
-    commands="top curl rsync netstat bash zip unzip dmidecode hddtemp lm-sensors"
+    commands="top curl rsync bash netstat zip unzip dmidecode hddtemp lm-sensors"
     for i in $commands
     do
         which $i 2>/dev/null
@@ -29,29 +29,12 @@ function install {
 
     if [[ ! $missing == "" ]]
     then
-        case $distro in
-        alpine)
-        apk update
-        apk add $missing
-        ;;
-        debian)
-        apt-get update
-        apt-get install $missing -y
-        ;;
-        ol)
-        dnf install $missing -y
-        ;;
-        fedora)
-        dnf install $missing -y
-        ;;
-        *)
-        echo "[!] Distribution not supported yet. Please report!"
+        echo "[!] Please resolve this dependencies, then relaunch setup.sh"
         echo "[#] Following package to manually install:"
         echo "[.] $missing"
-        ;;
-        esac
+        exit 0
     else
-        echo "[#] No dependencies need to be installed"
+        echo "[#] Dependencies OK!"
     fi
 
     echo "[#] Done"
@@ -119,10 +102,9 @@ function config {
         echo "[.] Enter ssh user account"
         read ssh_user
 
-        ssh-keygen -A rsa -f /root/.ssh/id_rsa.pub
-        ssh_key=$(cat /root/.ssh/id_rsa.pub)
+        ssh-keygen -t rsa -f /root/.ssh/id_rsa.pub
         echo "[.] Enter password for $ssh_user @ $ssh_server"
-        ssh $ssh_user@$ssh_server -p $ssh_port "echo $ssh_key >> .ssh/authorized_keys"
+        ssh-copy-id $ssh_user@$ssh_server -p $ssh_port
 
         if [ $? -eq 0 ]
         then
