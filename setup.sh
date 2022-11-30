@@ -84,6 +84,7 @@ function upg_srvcheck {
         echo "[#] Srvcheck already exist. Upgrading."
         srvcheck=1
         cat /opt/srvcheck/srvcheck | grep 'rsync.*-zav' > srvsync.save
+        cat /opt/srvcheck/srvcheck | grep 'bkpPartition.*-zav' > srvbkpsto.save
     else
         echo "[#] Srvcheck first installation."
         mkdir /opt/srvcheck
@@ -104,6 +105,8 @@ function config {
         echo "[#] Restoring previous configuration..."
         c=$(cat srvsync.save)
         sed -i "s~^rsync.*~$c~" /opt/srvcheck/srvcheck
+        c=$(cat srvbkpsto.save)
+        sed -i "s~^bkpPartition.*~$c~" /opt/srvcheck/srvcheck
         echo "[#] Done!"
     else
         echo "[#] Configuration."
@@ -121,7 +124,13 @@ function config {
         echo "[.] Enter password for $ssh_user @ $ssh_server"
         ssh $ssh_user@$ssh_server -p $ssh_port "echo $ssh_key >> .ssh/authorized_keys"
 
-        echo "[#] Ssh keys exchange complete"
+        if [ $? -eq 0 ]
+        then
+            echo "[#] Ssh keys exchange complete"
+        else
+            echo "[!] Connection error, manual ssh exchange needed!"
+        fi
+
         sed -i "s/CHANGEPORT/$ssh_port/" /opt/srvcheck/srvcheck
         sed -i "s/CHANGEUSER/$ssh_user/" /opt/srvcheck/srvcheck
         sed -i "s/CHANGESERVER/$ssh_server/" /opt/srvcheck/srvcheck
@@ -138,6 +147,15 @@ function config {
             echo "[#] Restic configured..."
         else
             sed -i 's/CHANGERESTICPASSWORD/""/' /opt/srvcheck/srvcheck
+        fi
+
+        echo "[.] Enter backup partition (enter for default /mnt/bkp)"
+        read bkpPartition
+        if [[ $bkpPartition == "" ]]
+        then
+            sed -i "s~^bkpPartition.*~bkpPartition=/mnt/bkp~" /opt/srvcheck/srvcheck
+        else
+            sed -i "s~^bkpPartition.*~bkpPartition=$bkpPartition~" /opt/srvcheck/srvcheck
         fi
 
         echo "[.] Choose srvcheck schedule"

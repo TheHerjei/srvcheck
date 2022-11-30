@@ -450,24 +450,26 @@ else
     echo "BKP001,1,$(date +%Y%m%d-%H%M%S),Restic backup not found" >> $F
 fi
 
+bkpPartition=/mnt/bkp
+
 # BKP002
-u=$(df --output=target,pcent | grep -e '/mnt/bkp.*' | awk '{ print $2 }' | sed 's/%//')
+u=$(df --output=target,pcent | grep -e "$bkpPartition.*" | awk '{ print $2 }' | sed 's/%//')
 
 case $u in
 [5-6][0-9])
-echo "BKP002,1,$(date +%Y%m%d-%H%M%S),High /mnt/bkp Used: $u %" >> $F
+echo "BKP002,1,$(date +%Y%m%d-%H%M%S),High $bkpPartition Used: $u %" >> $F
 ;;
 [7-9][0-9])
-echo "BKP002,2,$(date +%Y%m%d-%H%M%S),Critical /mnt/bkp Used: $u %" >> $F
+echo "BKP002,2,$(date +%Y%m%d-%H%M%S),Critical $bkpPartition Used: $u %" >> $F
 ;;
 100)
-echo "BKP002,2,$(date +%Y%m%d-%H%M%S),Critical /mnt/bkp Used: $u %" >> $F
+echo "BKP002,2,$(date +%Y%m%d-%H%M%S),Critical $bkpPartition Used: $u %" >> $F
 ;;
 "")
-echo "BKP002,1,$(date +%Y%m%d-%H%M%S),No partition for /mnt/bkp" >> $F
+echo "BKP002,1,$(date +%Y%m%d-%H%M%S),No partition for $bkpPartition" >> $F
 ;;
 *)
-echo "BKP002,0,$(date +%Y%m%d-%H%M%S),/mnt/bkp Used: $u %" >> $F
+echo "BKP002,0,$(date +%Y%m%d-%H%M%S),$bkpPartition Used: $u %" >> $F
 ;;
 esac
 
