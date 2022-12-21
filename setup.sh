@@ -2,7 +2,7 @@
 
 function check_dependencies {
 
-    commands="top curl rsync bash netstat zip unzip dmidecode hddtemp lm-sensors"
+    commands="top curl rsync bash netstat zip unzip dmidecode hddtemp sensors"
     for i in $commands
     do
         which $i 2>/dev/null
