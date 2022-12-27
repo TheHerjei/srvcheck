@@ -453,7 +453,7 @@ fi
 bkpPartition=/mnt/bkp
 
 # BKP002
-u=$(df --output=target,pcent | grep -e "$bkpPartition.*" | awk '{ print $2 }' | sed 's/%//')
+u=$(df --output=target,pcent | grep -e "$bkpPartition\s.*" | awk '{ print $2 }' | sed 's/%//')
 
 case $u in
 [5-6][0-9])
